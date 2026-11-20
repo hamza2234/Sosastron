@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="share_target_as_dm">以私訊傳送</string>
+    <string name="always_on_notif_channel_description">保持與收件匣 relay 的連線，以接收即時通知</string>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">已連接至 %1$d 個 relay</item>
+    </plurals>
+    <string name="always_on_notif_connecting">正在連接收件匣 relay…</string>
+    <string name="always_on_notif_title">Astro 通知已啟用</string>
+    <string name="call_ongoing">通話</string>
+    <string name="call_ongoing_description">進行中的通話通知</string>
+    <string name="call_with">與 %1$s 通話</string>
+    <string name="call_hangup">掛斷</string>
+    <string name="reaction">回應</string>
+    <string name="boost">提升</string>
+    <string name="post">發佈</string>
+    <string name="voice_post">語音貼文</string>
+    <string name="voice_reply">語音回覆</string>
+    <string name="private_message">私人訊息</string>
+    <string name="nest_notification_broadcasting">Nest — 直播中</string>
+    <string name="nest_notification_channel_description">在房間開啟期間保持音訊播放。</string>
+    <string name="nest_notification_listening">Nest 已連線</string>
+    <string name="nest_notification_stop">停止</string>
+    <string name="nest_notification_text">點擊以返回。</string>
+    <string name="nest_leave">離開</string>
+    <string name="nest_mute">靜音</string>
+    <string name="nest_unmute">取消靜音</string>
+    <string name="call_mute">靜音</string>
+    <string name="call_unmute">取消靜音</string>
+    <string name="napplet_cap_identity">身份識別</string>
+    <string name="napplet_cap_keys">鍵盤操作</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">儲存空間</string>
+    <string name="napplet_cap_value">付款</string>
+    <string name="napplet_cap_resource">網路</string>
+    <string name="napplet_cap_upload">上傳</string>
+    <string name="napplet_cap_theme">佈景主題</string>
+    <string name="napplet_cap_notify">通知</string>
+    <string name="napplet_cap_inc">訊息傳遞</string>
+    <string name="muted_button">靜音。點擊取消靜音</string>
+    <string name="mute_button">聲音開啟。點擊靜音</string>
+    <string name="play">播放</string>
+    <string name="pause">暫停</string>
+</resources>

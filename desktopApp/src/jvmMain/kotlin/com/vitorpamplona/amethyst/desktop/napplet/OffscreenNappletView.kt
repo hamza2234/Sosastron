@@ -1,0 +1,464 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.napplet
+
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.cef.OS
+import org.cef.browser.CefFrame
+import org.cef.browser.OffscreenCefBrowser
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.ColorAlphaType
+import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.ImageInfo
+import java.awt.Canvas
+import java.awt.Cursor
+import java.awt.Rectangle
+import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
+import java.nio.ByteBuffer
+import javax.swing.SwingUtilities
+import javax.swing.Timer
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+/**
+ * The page of an off-screen napplet browser, for a note to draw and drive: its frames as an
+ * [ImageBitmap], its cursor, and the input the note forwards to it. Positions are in the page's
+ * device-independent pixels.
+ */
+class OffscreenNappletView : OffscreenCefBrowser.Listener {
+    private val mutableFrame = MutableStateFlow<ImageBitmap?>(null)
+
+    /** The page's last frame, at its size times the screen's scale. */
+    val frame: StateFlow<ImageBitmap?> = mutableFrame.asStateFlow()
+
+    private val mutableCursor = MutableStateFlow(Cursor.getDefaultCursor())
+    val cursor: StateFlow<Cursor> = mutableCursor.asStateFlow()
+
+    @Volatile
+    internal var browser: OffscreenCefBrowser? = null
+        set(value) {
+            field = value
+            value?.resize(width, height, scale)
+        }
+
+    @Volatile private var width = 1
+
+    @Volatile private var height = 1
+
+    @Volatile private var scale = 1.0
+
+    // Painting state, touched only on Chromium's UI thread.
+    private var pixels = ByteArray(0)
+    private var frameWidth = 0
+    private var frameHeight = 0
+    private var popupPixels: ByteArray? = null
+    private var popupWidth = 0
+    private var popupHeight = 0
+    private var popupShown = false
+    private var popupBounds: Rectangle? = null
+
+    // Frames published lately, newest last (Chromium's UI thread). A bitmap's native pixels go when it
+    // is closed, not when it is collected, and a frame a second's worth of garbage-free painting
+    // would otherwise hold hundreds of megabytes until a collection. One replaced a few frames ago is
+    // closed on the AWT thread, where Compose draws, so it is never closed mid-draw.
+    private val published = ArrayDeque<Bitmap>()
+
+    // Set once the last frame became the note's poster: nothing is published or closed after it.
+    @Volatile
+    private var stopped = false
+
+    // A key press whose character no typed event delivered (see [key]).
+    private var untyped: KeyEvent? = null
+
+    /** The page is [width] x [height] device-independent pixels on a screen of [scale]. */
+    fun resize(
+        width: Int,
+        height: Int,
+        scale: Double,
+    ) {
+        val w = width.coerceAtLeast(1)
+        val h = height.coerceAtLeast(1)
+        // The first size goes at once: the page has nothing to show before it.
+        if (this.width <= 1 && this.height <= 1) {
+            apply(w, h, scale)
+            return
+        }
+        if (w == this.width && h == this.height && scale == this.scale) {
+            pending = null
+            return
+        }
+        // Held for a moment, the newest one winning: a screen that leaves takes its box with it in
+        // the same frame the layout around it changes (the notification panel snaps back as the
+        // nSite is left), and that last size, told to the page, was what it painted while away:
+        // coming back showed that frame, the wrong size, until it painted again.
+        pending = Triple(w, h, scale)
+        if (!applyPending.isRunning) applyPending.start()
+    }
+
+    /** The page's box left the screen: a size it reported on its way out is never sent. */
+    fun leave() {
+        pending = null
+        applyPending.stop()
+        settle.stop()
+        // A size applied just before leaving came with the leaving: the tab switch docks the
+        // notification panel a frame or more before the screen goes, and the hold above is not
+        // always long enough. Told to a page that stays alive out of sight, it was what that page
+        // painted, and what showed (on the left, or stuck there) when the reader came back.
+        val before = previous ?: return
+        if (System.currentTimeMillis() - appliedAtMs > LEAVE_REVERT_MS) return
+        previous = null
+        this.width = before.first
+        this.height = before.second
+        this.scale = before.third
+        browser?.resize(before.first, before.second, before.third)
+    }
+
+    /**
+     * The page is in sight again after being hidden: asks for a frame at its size now, rather than
+     * at the hidden page's next frame (up to a second away), and keeps checking until one comes.
+     */
+    fun shown() {
+        if (stopped) return
+        browser?.settle()
+        settleChecks = 0
+        settle.restart()
+    }
+
+    private fun apply(
+        width: Int,
+        height: Int,
+        scale: Double,
+    ) {
+        previous = if (this.width > 1 || this.height > 1) Triple(this.width, this.height, this.scale) else null
+        appliedAtMs = System.currentTimeMillis()
+        this.width = width
+        this.height = height
+        this.scale = scale
+        browser?.resize(width, height, scale)
+        settleChecks = 0
+        settle.restart()
+    }
+
+    // A size the box reported that the page has not been told yet. AWT thread, like [resize].
+    private var pending: Triple<Int, Int, Double>? = null
+
+    // The size before the last one applied, and when that was: see [leave]. AWT thread.
+    private var previous: Triple<Int, Int, Double>? = null
+    private var appliedAtMs = 0L
+
+    private val applyPending: Timer =
+        Timer(RESIZE_HOLD_MS) {
+            val (w, h, s) = pending ?: return@Timer
+            pending = null
+            apply(w, h, s)
+        }.apply { isRepeats = false }
+
+    // How many times the page was asked again for a frame at its size since it last resized.
+    private var settleChecks = 0
+
+    // Once a resize settles, checks the page painted at its new size and asks again when it didn't:
+    // Chromium drops resizes that come in a burst. AWT thread, like [resize].
+    private val settle: Timer =
+        Timer(SETTLE_MS) {
+            val frame = mutableFrame.value
+            val wantWidth = (width * scale).roundToInt()
+            val wantHeight = (height * scale).roundToInt()
+            if (frame == null || stopped || (abs(frame.width - wantWidth) <= 1 && abs(frame.height - wantHeight) <= 1)) return@Timer
+            if (++settleChecks > SETTLE_ATTEMPTS) return@Timer
+            Log.d(TAG) { "The page painted ${frame.width}x${frame.height}, not ${wantWidth}x$wantHeight: asking again" }
+            browser?.settle()
+            restartSettle()
+        }.apply { isRepeats = false }
+
+    private fun restartSettle() {
+        settle.restart()
+    }
+
+    /**
+     * Stops publishing frames and hands over the last one, which is never closed: it outlives the
+     * page as the note's poster.
+     */
+    fun keepLastFrame(): ImageBitmap? {
+        stopped = true
+        return mutableFrame.value
+    }
+
+    fun focus(focused: Boolean) {
+        browser?.setFocus(focused)
+    }
+
+    /** Re-asserts the page's focus after something in Chromium dropped it (see [OffscreenCefBrowser.refocus]). */
+    fun refocus() {
+        browser?.refocus()
+    }
+
+    /** A mouse event like [source] (its button, modifiers and clicks), at [x], [y] on the page. */
+    fun mouse(
+        source: MouseEvent,
+        id: Int,
+        x: Int,
+        y: Int,
+    ) {
+        val browser = browser ?: return
+        browser.forwardMouse(MouseEvent(EVENT_SOURCE, id, source.`when`, source.modifiersEx, x, y, source.clickCount, false, source.button))
+    }
+
+    /**
+     * A wheel turn like [source], at [x], [y] on the page. JCEF hands Chromium the event's rotation as
+     * a pixel delta, unconverted: AWT counts a notch towards the user (down) as +1, three units for a
+     * unit scroll, where Chromium reads positive as up and a notch as [WHEEL_DELTA]. So the delta goes
+     * over as a block scroll (which JCEF passes as it is) already in Chromium's terms: a page that got
+     * AWT's own numbers scrolled a few pixels the wrong way, so nothing moved at its top.
+     */
+    fun wheel(
+        source: MouseWheelEvent,
+        x: Int,
+        y: Int,
+    ) {
+        val browser = browser ?: return
+        val delta = -(source.preciseWheelRotation * UNIT_PIXELS).roundToInt()
+        if (delta == 0) return
+        browser.forwardWheel(wheelEvent(source.`when`, source.modifiersEx, x, y, delta))
+    }
+
+    /** A wheel turn of [delta] in Chromium's terms (pixels, positive up), as a block scroll JCEF passes as it is. */
+    private fun wheelEvent(
+        time: Long,
+        modifiers: Int,
+        x: Int,
+        y: Int,
+        delta: Int,
+    ) = MouseWheelEvent(EVENT_SOURCE, MouseEvent.MOUSE_WHEEL, time, modifiers, x, y, x, y, 0, false, MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, delta, delta.toDouble())
+
+    /**
+     * Forwards a key event as AWT delivered it, so Chromium reads the platform's own key codes. A
+     * press that carries a character also needs a typed event for the page to get the text; when
+     * the window doesn't pass one on after the press, one is made from it.
+     */
+    fun key(event: KeyEvent) {
+        val browser = browser ?: return
+        if (editCommand(browser, event)) return
+        when (event.id) {
+            KeyEvent.KEY_TYPED -> {
+                untyped = null
+                browser.forwardKey(event)
+            }
+            KeyEvent.KEY_PRESSED -> {
+                browser.forwardKey(named(event))
+                if (event.keyChar != KeyEvent.CHAR_UNDEFINED && !event.isControlDown && !event.isMetaDown) {
+                    untyped = event
+                    // AWT queues a press's typed event right behind it, so it has arrived by then.
+                    SwingUtilities.invokeLater {
+                        val pending = untyped ?: return@invokeLater
+                        untyped = null
+                        browser.forwardKey(KeyEvent(EVENT_SOURCE, KeyEvent.KEY_TYPED, pending.`when`, pending.modifiersEx, KeyEvent.VK_UNDEFINED, pending.keyChar))
+                    }
+                }
+            }
+            else -> browser.forwardKey(named(event))
+        }
+    }
+
+    /**
+     * [event] as JCEF can name it. On Linux JCEF names only Backspace, Delete, the arrows, Enter,
+     * Escape and Tab itself, and takes every other key's X keysym from its character. A navigation
+     * key has none (`CHAR_UNDEFINED`, 0xFFFF, which is X's Delete), so Page Down, Page Up, Home and
+     * End all reached the page as Delete and scrolled nothing. Given its keysym as the character,
+     * each is read as itself. Only presses and releases carry it: no typed event follows these keys.
+     */
+    private fun named(event: KeyEvent): KeyEvent {
+        if (!IS_LINUX) return event
+        val keysym = linuxKeysym(event.keyCode) ?: return event
+        return KeyEvent(EVENT_SOURCE, event.id, event.`when`, event.modifiersEx, event.keyCode, keysym.toChar(), event.keyLocation)
+    }
+
+    /**
+     * Runs ⌘C, ⌘V, ⌘X, ⌘A, ⌘Z and ⇧⌘Z on the page on macOS, and reports whether [event] was one. A
+     * windowless Chromium on macOS does not act on these keys (a native one gets them from the Edit
+     * menu), so forwarded they did nothing: no copy, paste or select-all in any page. Other systems'
+     * Ctrl shortcuts are left to Chromium: running them here as well could paste twice.
+     */
+    private fun editCommand(
+        browser: OffscreenCefBrowser,
+        event: KeyEvent,
+    ): Boolean {
+        if (!IS_MAC || !event.isMetaDown || event.isControlDown || event.isAltDown) return false
+        val command: ((CefFrame) -> Unit)? =
+            when (event.keyCode) {
+                KeyEvent.VK_C -> CefFrame::copy
+                KeyEvent.VK_V -> CefFrame::paste
+                KeyEvent.VK_X -> CefFrame::cut
+                KeyEvent.VK_A -> CefFrame::selectAll
+                KeyEvent.VK_Z -> if (event.isShiftDown) CefFrame::redo else CefFrame::undo
+                else -> null
+            }
+        if (command == null) return false
+        // The command runs once, on the press; its typed and released events go nowhere.
+        if (event.id == KeyEvent.KEY_PRESSED) (browser.focusedFrame ?: browser.mainFrame)?.let(command)
+        return true
+    }
+
+    // Chromium calls these from native code: an exception escaping one would only be printed, without
+    // its trace, so each one logs its own.
+    override fun onPaint(
+        popup: Boolean,
+        frame: ByteBuffer,
+        width: Int,
+        height: Int,
+    ) {
+        try {
+            paint(popup, frame, width, height)
+        } catch (e: Exception) {
+            Log.w(TAG, "A frame did not paint", e)
+        }
+    }
+
+    private fun paint(
+        popup: Boolean,
+        frame: ByteBuffer,
+        width: Int,
+        height: Int,
+    ) {
+        val size = width * height * 4
+        if (popup) {
+            val copy = popupPixels?.takeIf { it.size == size } ?: ByteArray(size)
+            frame.duplicate().get(copy, 0, size)
+            popupPixels = copy
+            popupWidth = width
+            popupHeight = height
+        } else {
+            if (pixels.size != size) pixels = ByteArray(size)
+            frame.duplicate().get(pixels, 0, size)
+            frameWidth = width
+            frameHeight = height
+        }
+        publish()
+    }
+
+    override fun onPopupShow(show: Boolean) {
+        popupShown = show
+        if (!show) {
+            popupPixels = null
+            popupBounds = null
+        }
+    }
+
+    override fun onPopupSize(bounds: Rectangle) {
+        popupBounds = Rectangle(bounds)
+    }
+
+    override fun onCursorChange(cursorType: Int) {
+        mutableCursor.value = runCatching { Cursor.getPredefinedCursor(cursorType) }.getOrDefault(Cursor.getDefaultCursor())
+    }
+
+    private fun publish() {
+        if (stopped || frameWidth == 0 || frameHeight == 0) return
+        val bounds = popupBounds
+        val popup = popupPixels
+        val composed =
+            if (popupShown && bounds != null && popup != null) {
+                // A select menu paints apart from the page: lay it over a copy, so the page's own
+                // next frame still finds itself whole.
+                pixels.copyOf().also { blit(popup, popupWidth, popupHeight, it, (bounds.x * scale).roundToInt(), (bounds.y * scale).roundToInt()) }
+            } else {
+                pixels
+            }
+        val info = ImageInfo(frameWidth, frameHeight, ColorType.BGRA_8888, ColorAlphaType.PREMUL)
+        // installPixels copies, so the buffer is free for the next frame.
+        val bitmap = Bitmap()
+        if (!bitmap.installPixels(info, composed, frameWidth * 4)) {
+            bitmap.close()
+            return
+        }
+        bitmap.setImmutable()
+        mutableFrame.value = bitmap.asComposeImageBitmap()
+        published.addLast(bitmap)
+        while (published.size > LIVE_FRAMES) {
+            val old = published.removeFirst()
+            SwingUtilities.invokeLater { old.close() }
+        }
+    }
+
+    private fun blit(
+        source: ByteArray,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        target: ByteArray,
+        left: Int,
+        top: Int,
+    ) {
+        val fromX = maxOf(0, -left)
+        val toX = minOf(sourceWidth, frameWidth - left)
+        if (toX <= fromX) return
+        for (row in maxOf(0, -top) until minOf(sourceHeight, frameHeight - top)) {
+            System.arraycopy(source, (row * sourceWidth + fromX) * 4, target, ((top + row) * frameWidth + left + fromX) * 4, (toX - fromX) * 4)
+        }
+    }
+
+    private companion object {
+        const val TAG = "OffscreenNappletView"
+
+        // The frames kept open: the one shown, and the few before it a draw may still hold.
+        const val LIVE_FRAMES = 3
+
+        // Chromium's wheel delta for one notch, as Windows reports it and CEF's own sample sends.
+        const val WHEEL_DELTA = 120
+
+        // How long after a resize the page should have painted at its new size, and how often it is asked again.
+        const val SETTLE_MS = 150
+        const val SETTLE_ATTEMPTS = 20
+
+        // How long a new size waits before the page is told: one frame or so of a screen leaving.
+        const val RESIZE_HOLD_MS = 60
+
+        /** How soon before leaving a resize counts as part of the leaving: see [leave]. */
+        const val LEAVE_REVERT_MS = 300L
+
+        // What one unit of AWT's wheel rotation scrolls. On macOS a trackpad or a Magic Mouse reports
+        // fractions of a unit, many a second, and the rest of the app (Compose's MacOSCocoaConfig) moves
+        // 10 dp for each: at a notch's 120 the paper ran twelve times faster than the screen around it.
+        val UNIT_PIXELS: Double = if (OS.isMacintosh()) 10.0 else WHEEL_DELTA.toDouble()
+
+        // Every forwarded event needs a source; Chromium reads only its fields.
+        val EVENT_SOURCE = Canvas()
+
+        private val IS_MAC = OS.isMacintosh()
+
+        private val IS_LINUX = OS.isLinux()
+    }
+}
+
+/** The X keysym of an AWT key JCEF can't name on Linux by itself (see [OffscreenNappletView.key]), or null. */
+internal fun linuxKeysym(keyCode: Int): Int? =
+    when (keyCode) {
+        KeyEvent.VK_PAGE_UP -> 0xff55
+        KeyEvent.VK_PAGE_DOWN -> 0xff56
+        KeyEvent.VK_HOME -> 0xff50
+        KeyEvent.VK_END -> 0xff57
+        else -> null
+    }

@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
+
+import com.vitorpamplona.amethyst.commons.relays.MutableTime
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
+
+/**
+ * This query type creates only ONE relay subscription. It filters duplicates
+ * by DistinctById.uniqueId() but it doesn't create a new subscription for each.
+ *
+ * All filters are passed as a single sub.
+ *
+ * It is ideal for temporary filters, including event, user finding that must be
+ * disabled after the user is found.
+ *
+ * The cursors live on the holders each entity's keys name ([cursorHoldersOf]); an entity that
+ * names none is asked from scratch.
+ */
+abstract class SingleSubEoseManager<T>(
+    client: INostrClient,
+    allKeys: () -> Set<T>,
+    val invalidateAfterEose: Boolean = false,
+) : BaseEoseManager<T>(client, allKeys) {
+    /**
+     * [relay] answered [filters] up to [time] (its EOSE, or a live event after it). An override that
+     * stamps an entity's own cursor (a note's replies, a user's cards) leaves out what a filter the
+     * relay cut at its `limit` names ([wasCut]): that answer may lack older events.
+     */
+    open fun newEose(
+        relay: NormalizedRelayUrl,
+        time: Long,
+        filters: List<Filter>? = null,
+    ) {
+        if (invalidateAfterEose) {
+            invalidateFilters()
+        }
+    }
+
+    val sub: Subscription =
+        requestNewSubscription(
+            object : SubscriptionListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    newEose(relay, TimeUtils.now(), forFilters)
+                }
+
+                override suspend fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (isLive) {
+                        newEose(relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
+
+    /** Whether [relay] cut [filter], one of the filters it is answering, at its `limit`. */
+    protected fun wasCut(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ) = wasCut(sub.id, relay, filter)
+
+    override fun updateSubscriptions(keys: Set<T>) {
+        val groups = keys.groupBy { distinct(it) }.values.toList()
+        val holders = groups.map { cursorsNamedBy(it) }
+
+        if (holders.all { it.isEmpty() }) {
+            val uniqueSubscribedAccounts = groups.map { it.first() }
+            serve(sub.id, emptyList())
+            sub.updateFilters(updateFilter(uniqueSubscribedAccounts, null)?.ifEmpty { null }?.groupByRelay())
+            return
+        }
+
+        // The keys name the holders of what they load: each entity (a community, a channel, a
+        // profile) is windowed by its own holders' cursors, so one opened later is asked from scratch
+        // without making the others refetch, and closing one takes its cursors with it. An entity
+        // whose keys name none asks from scratch. On each relay, the entities asked from the same
+        // point are built together, so the builder's batching (one filter per relay for every
+        // channel on it) survives even when their relay sets differ elsewhere.
+        val entities = groups.map { it.first() }
+        val windowsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableMap<Long?, MutableSet<Int>>>()
+        // An entity whose holders vouch for nothing yet (a screen just opened) is asked from scratch
+        // on every relay: it needs no build of its own to plan, and they are all built at once.
+        val fresh = mutableListOf<T>()
+        entities.forEachIndexed { index, key ->
+            if (holders[index].all { it.isEmpty() }) {
+                fresh.add(key)
+                return@forEachIndexed
+            }
+            val own = updateFilter(listOf(key), null).orEmpty()
+            val cursors = CursorPlanner.cursorsByRelay(own, holders[index], cursorSource, refusedKinds)
+            own.mapTo(mutableSetOf()) { it.relay }.forEach { relay ->
+                windowsPerRelay.getOrPut(relay) { mutableMapOf() }.getOrPut(cursors[relay]) { mutableSetOf() }.add(index)
+            }
+        }
+
+        // Relays split the same way share their builder calls: one per window, for all of them.
+        val relaysPerSplit = windowsPerRelay.entries.groupBy({ it.value }, { it.key })
+        val filters =
+            relaysPerSplit.flatMap { (split, relays) ->
+                val onTheseRelays = relays.toSet()
+                split.flatMap { (since, members) ->
+                    val sinceMap: SincePerRelayMap? = since?.let { time -> relays.associateWithTo(mutableMapOf()) { MutableTime(time) } }
+                    val built = updateFilter(members.map { entities[it] }, sinceMap).orEmpty().filter { it.relay in onTheseRelays }
+                    // Each holder accepts answers to the windows sent for it (see [RelayCursors.accepts]).
+                    val windows = built.filter { it.filter.until == null }.groupBy({ it.relay }, { it.filter.since })
+                    members.flatMap { holders[it] }.distinct().forEach { holder ->
+                        windows.forEach { (relay, sinces) -> holder.planned(relay, cursorSource, sinces.filterNotNullTo(mutableSetOf())) }
+                    }
+                    built
+                }
+            } + (if (fresh.isEmpty()) emptyList() else updateFilter(fresh, null).orEmpty())
+        serve(sub.id, holders.flatten().distinct())
+        sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())
+    }
+
+    abstract fun updateFilter(
+        keys: List<T>,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
+
+    abstract fun distinct(key: T): Any
+}

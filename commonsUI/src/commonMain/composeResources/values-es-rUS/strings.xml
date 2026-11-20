@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="your_profile_image">Subiendo</string>
+    <string name="group_picture">Imagen del grupo</string>
+    <string name="copy_user_pubkey">Copiar ID del autor</string>
+    <string name="open_poll">segundos</string>
+    <string name="zap_type_private_explainer">El remitente y el receptor pueden verse entre sí y leer el mensaje</string>
+    <string name="account_settings">Configuraciones de la cuenta</string>
+    <string name="automatically_play_videos">Reproducción de vídeo</string>
+    <string name="private_conversation_notification">&lt;No se pudo desencriptar el mensaje privado&gt;\n\nTe citaron en una conversación privada o encriptada entre %1$s y %2$s.</string>
+    <string name="public_chat_explainer">Los chats públicos son visibles para todos en Nostr y cualquiera puede participar en ellos. Son ideales para comunidades abiertas alrededor de temas específicos. La moderación puede controlarse eliminando mensajes en sus relés.</string>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · %1$d vencen en 1h</item>
+        <item quantity="other"> · %1$d vencen en 1h</item>
+    </plurals>
+    <string name="tor_full_privacy_explainer">Oculta tu IP en todas las conexiones</string>
+</resources>

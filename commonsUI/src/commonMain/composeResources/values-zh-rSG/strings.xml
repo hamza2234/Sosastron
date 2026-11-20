@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="use_direct_url">使用直接链接</string>
+    <string name="road_event_construction">建设</string>
+    <string name="favorite_apps">喜欢的应用</string>
+    <string name="kind_gift_wraps">包装礼物</string>
+    <string name="marmot_group">MLS 组</string>
+    <string name="software_apps">应用</string>
+</resources>

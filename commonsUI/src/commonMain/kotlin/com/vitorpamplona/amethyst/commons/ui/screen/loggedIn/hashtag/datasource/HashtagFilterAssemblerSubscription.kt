@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.datasource
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.hashtag.datasource.HashtagQueryState
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+
+@Composable
+fun HashtagFilterAssemblerSubscription(
+    tag: Route.Hashtag,
+    accountViewModel: AccountViewModel,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
+    /** The screen's held labels for this hashtag, which hold what the label subscription loads. */
+    labels: HeldNotes? = null,
+) {
+    // different screens get different states
+    // even if they are tracking the same tag.
+    val state =
+        remember(tag, feeds, labels) {
+            HashtagQueryState(
+                tag.hashtag,
+                accountViewModel.account.followOutboxesOrProxy.flow.value,
+                accountViewModel.account,
+                feeds,
+                labels,
+            )
+        }
+
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
+}

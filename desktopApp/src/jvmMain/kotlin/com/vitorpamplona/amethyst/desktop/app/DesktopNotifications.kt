@@ -1,0 +1,228 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.app
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import com.vitorpamplona.amethyst.commons.claudecode.ChatAttention
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NucleusNotificationDispatcher
+import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
+import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.SendResult
+import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_open
+import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
+import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
+import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_description
+import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview
+import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview_description
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.desktop.ui.notifications.DesktopNotificationAutoDispatcher
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * OS notifications for mentions, replies, reactions, zaps and messages: the native notifier
+ * (Notification Center, the Windows toast, libnotify) with the system tray as the fallback.
+ * Off until the user turns them on.
+ */
+class DesktopNotifications(
+    private val scope: CoroutineScope,
+) {
+    val settings: NotificationSettings = PreferencesNotificationSettings()
+
+    /** Clicks on the notifications below: the window comes forward and opens what each was about. */
+    val clicks = NotificationClickRouter()
+
+    // Built on first use: it loads the native notifier.
+    val dispatcher: NotificationDispatcher by lazy {
+        NucleusNotificationDispatcher(
+            bundleId = BUNDLE_ID,
+            appLabel = APP_LABEL,
+            fallback = AwtTrayNotifier(),
+            scope = scope,
+            openActionLabel = { loadStringRes(Res.string.desktop_notification_open) },
+            onClick = clicks::onClick,
+        )
+    }
+
+    /** Events older than the app are history, not news. */
+    private val sessionStartSec = nowEpochSeconds()
+
+    /**
+     * Notifies [account] of new events for it, except while [holdBack] is true (the account is on
+     * screen in a focused window). Watches the event stream only while notifications are on (they
+     * start off), and loads the native notifier off the UI thread the first time they are. A toast
+     * goes out only for what the Notifications tab would list under its current top-nav filter,
+     * read at each event so a change applies at once. [accountLabel] names the account in the
+     * toast when more than one is notified.
+     */
+    fun watch(
+        account: Account,
+        cache: LocalCache,
+        holdBack: StateFlow<Boolean>,
+        accountLabel: () -> String? = { null },
+    ): Job =
+        scope.launch {
+            settings.enabled.collectLatest { on ->
+                if (!on) return@collectLatest
+                val notifier = withContext(Dispatchers.IO) { dispatcher }
+                coroutineScope {
+                    DesktopNotificationAutoDispatcher(
+                        dispatcher = notifier,
+                        settings = settings,
+                        myPubKeyHex = account.signer.pubKey,
+                        eventStream = cache.getEventStream(),
+                        authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
+                        displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
+                        compose = { event -> composeNotification(account, event) },
+                        isAcceptable = notifiesAbout(account),
+                        isWindowFocused = holdBack,
+                        sessionStartSec = sessionStartSec,
+                        scope = this,
+                        accountLabel = accountLabel,
+                    ).start()
+                }
+            }
+        }
+
+    /**
+     * Tells the user when a Claude Code session waits on their approval or finishes its turn,
+     * while the window is in the background: long tasks run without being watched. Follows the
+     * OS notifications switch and Do Not Disturb.
+     */
+    fun watchClaudeCode(isWindowFocused: StateFlow<Boolean>): Job =
+        scope.launch {
+            ClaudeCodeService.shared.attention.collect { event ->
+                if (!settings.enabled.value || isWindowFocused.value) return@collect
+                if (settings.dnd.value.isActive(TimeUtils.now())) return@collect
+                val title =
+                    loadStringRes(
+                        when (event.kind) {
+                            ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
+                            ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
+                        },
+                        event.agent,
+                    )
+                val notifier = withContext(Dispatchers.IO) { dispatcher }
+                val result = notifier.send(NotificationSpec(title = title, body = event.title, kind = NotifKind.AGENT, threadId = CLAUDE_CODE_THREAD))
+                if (result is SendResult.Failed) Log.w(TAG, "Could not post the Claude Code notification", result.error)
+            }
+        }
+
+    /** A new top-level note that tags the user is a mention; every other kind goes to its shared composer. */
+    private suspend fun composeNotification(
+        account: Account,
+        event: Event,
+    ): NotificationMessage? {
+        val draft =
+            if (event is TextNoteEvent) {
+                MentionNotificationComposer.compose(account, event)
+            } else {
+                StandardNotificationComposer.compose(account, event)
+            }
+        return draft?.render()
+    }
+
+    companion object {
+        private const val BUNDLE_ID = "com.vitorpamplona.amethyst.desktop"
+        private const val APP_LABEL = "Amethyst"
+        private const val CLAUDE_CODE_THREAD = "claude-code"
+        private const val TAG = "DesktopNotifications"
+
+        /**
+         * Whether a note may raise a toast for [account]: the Notifications tab would list it under
+         * the top-nav filter picked right now (Curated, All Follows, a list...), and its author is not
+         * muted, blocked or reported.
+         */
+        internal fun notifiesAbout(account: Account): (Note) -> Boolean {
+            val feedFilter = NotificationFeedFilter(account)
+            return { note -> account.isAcceptable(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
+        }
+    }
+}
+
+/** The notification settings' delivery section on desktop: the OS notifications switch and preview. */
+@Composable
+fun DesktopNotificationDeliverySettings(notifications: DesktopNotifications) {
+    val enabled by notifications.settings.enabled.collectAsState()
+    val preview by notifications.settings.previewInToast.collectAsState()
+    val permission by notifications.dispatcher.permission.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) { notifications.dispatcher.refreshPermission() }
+
+    SettingsRow(Res.string.desktop_notifications, Res.string.desktop_notifications_description) {
+        Switch(
+            checked = enabled,
+            onCheckedChange = { on ->
+                notifications.settings.setEnabled(on)
+                if (on) scope.launch { notifications.dispatcher.requestPermission() }
+            },
+        )
+    }
+
+    if (enabled && permission == PermissionState.Denied) {
+        Text(
+            stringRes(Res.string.desktop_notifications_denied),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+
+    SettingsRow(Res.string.desktop_notifications_preview, Res.string.desktop_notifications_preview_description) {
+        Switch(checked = preview, enabled = enabled, onCheckedChange = notifications.settings::setPreviewInToast)
+    }
+}

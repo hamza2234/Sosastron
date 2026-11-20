@@ -1,0 +1,33 @@
+# desktopApp plans
+
+_Audited 2026-06-30. 13 plans: 10 shipped (archived), 2 in-progress, 1 queued, 0 abandoned._
+
+## In progress
+| Plan | Summary |
+| ---- | ------- |
+| [2026-11-20-desktop-scroll-benchmark.md](2026-11-20-desktop-scroll-benchmark.md) | Home-feed scroll benchmark (`-Damethyst.scrollBench`, `tools/desktop-run/scroll-bench.sh`): frame gaps, UI-thread busy time, GC/JIT and image cache hits per pass. Baseline under software Skia: ~47 fps warm with the UI thread 95% busy; the first scroll spends ~9 s in JIT. Detects the image-cache fix (75% vs 63% memory hits scrolling back). Found the feed prefetch decoding originals (171 MiB vs the cards' 12 MiB); now sized to the viewport. |
+| [2026-11-20-nip46-signer-background.md](2026-11-20-nip46-signer-background.md) | NIP-46 signer keeps running with the window closed: tray icon (ComposeNativeTray; quits where Linux has no tray host), screens stop and feeds close after 30 s while notifications and the signer stay, `nostrconnect://` links registered on every package. Real trays on each OS and a packaged ProGuard build still to try. |
+| [2026-11-07-desktop-startup-performance.md](2026-11-07-desktop-startup-performance.md) | Desktop cold start to a settled home feed (260 follows): CPU/JIT analysis and A/B results; no throwaway 0x0 first composition, class-compiled lambdas, warm-up, relay preconnect, lazy drawer and labels (logged-in shell on screen 8.8 → 4.5 s without AppCDS); AppCDS on the dev `run`. AppCDS for packages and a lighter first composition still to do; tools on branch `ccr-391ad394-xc470s`. |
+| [2026-10-15-desktop-self-update-study.md](2026-10-15-desktop-self-update-study.md) | Desktop self-update: NIP-82 releases signed by Amethyst's key, per-install installers (DMG, MSI, zip, AppImage, tarball, deb/rpm), notify-only for Homebrew/Flatpak, `amy releases publish`, AppImage zsync. Built and tested on Linux; real macOS/Windows installs still to try. |
+| [2026-10-11-desktop-video-compression.md](2026-10-11-desktop-video-compression.md) | Real video compression on the JVM desktop via a system `ffmpeg` (Android's rules table shared through `commons`, encoder preference list, content-aware slider, hidden controls without ffmpeg); phase 1 built on the branch, see the [manual sheet](2026-10-11-desktop-video-compression-manual-testing.md); phase 2 bundles an LGPL binary. |
+| [2026-05-12-feat-desktop-wallet-zapping-test-coverage-plan.md](2026-05-12-feat-desktop-wallet-zapping-test-coverage-plan.md) | Desktop wallet/zap test coverage; NWC handler + RPC round-trip tests shipped, wallet-column-state and zap-dialog-logic tests still missing. |
+| [2026-06-21-napplet-desktop-host.md](2026-06-21-napplet-desktop-host.md) | Desktop NIP-5A/5D host; shared core extractions done, desktop engine/scheme-handler/transport/UI edge not yet built. |
+
+## Queued
+| Plan | Summary |
+| ---- | ------- |
+| [2026-05-21-embedded-wallet-phase2-research.md](2026-05-21-embedded-wallet-phase2-research.md) | Research for an embedded self-custodial Lightning wallet (Breez/ldk-node/lightning-kmp); parked, no code. |
+
+## Archived (shipped)
+| Plan | Summary |
+| ---- | ------- |
+| [archive/2026-05-09-embedded-local-relay-plan.md](archive/2026-05-09-embedded-local-relay-plan.md) | In-process SQLite local relay with write-through + startup hydration + settings UI. |
+| [archive/2026-05-11-wallet-zapping-brainstorm.md](archive/2026-05-11-wallet-zapping-brainstorm.md) | Brainstorm map for the desktop wallet & zapping experience (NWC parity shipped). |
+| [archive/2026-05-12-wallet-zapping-phase1-2-plan.md](archive/2026-05-12-wallet-zapping-phase1-2-plan.md) | NWC wallet column (connect/balance/send/receive) plus upgraded zapping UX. |
+| [archive/2026-05-19-fix-desktop-deb-launch-crash-brainstorm.md](archive/2026-05-19-fix-desktop-deb-launch-crash-brainstorm.md) | Fix .deb launch crash via jlink modules + CI launch smoke test. |
+| [archive/2026-05-20-wallet-zapping-manual-testing-sheet.md](archive/2026-05-20-wallet-zapping-manual-testing-sheet.md) | Manual QA sheet for the desktop wallet & zapping feature. |
+| [archive/2026-05-23-feat-send-dialog-lnurl-pay-brainstorm.md](archive/2026-05-23-feat-send-dialog-lnurl-pay-brainstorm.md) | Brainstorm for LNURL-pay / lightning-address support in the send dialog. |
+| [archive/2026-05-23-feat-send-dialog-lnurl-pay-plan.md](archive/2026-05-23-feat-send-dialog-lnurl-pay-plan.md) | Send dialog accepts LNURL + lightning addresses with auto-detect/resolve flow. |
+| [archive/2026-05-23-fix-nsec-session-persistence-brainstorm.md](archive/2026-05-23-fix-nsec-session-persistence-brainstorm.md) | Fix nsec sessions not persisting across restarts (save on App-level scope). |
+| [archive/2026-06-08-feat-desktop-image-compression-plan.md](archive/2026-06-08-feat-desktop-image-compression-plan.md) | JPEG re-encode/downscale upload pipeline with EXIF strip + failure dialog, shared with CLI. |
+| [archive/2026-06-17-feat-app-launch-optimization-plan.md](archive/2026-06-17-feat-app-launch-optimization-plan.md) | Launch testing/benchmark foundation + targeted launch-path fixes (all in-scope phases landed). |

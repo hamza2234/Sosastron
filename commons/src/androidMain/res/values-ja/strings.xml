@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_address_hint">検索またはアドレスを入力</string>
+    <string name="napplet_untitled">無題の nApplet</string>
+</resources>

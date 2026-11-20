@@ -1,0 +1,791 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.app
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.WindowState
+import androidx.compose.ui.window.application
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_open
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_quit
+import com.vitorpamplona.amethyst.commons.resources.desktop_tray_tooltip
+import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
+import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
+import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerBadges
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
+import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
+import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
+import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletWindows
+import com.vitorpamplona.amethyst.desktop.napplet.Nip46ConsentWindows
+import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
+import com.vitorpamplona.amethyst.desktop.platform.AppWindow
+import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
+import com.vitorpamplona.amethyst.desktop.platform.DesktopTypography
+import com.vitorpamplona.amethyst.desktop.platform.DesktopUiScale
+import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.PlatformAppearance
+import com.vitorpamplona.amethyst.desktop.platform.PlatformFonts
+import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
+import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
+import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
+import com.vitorpamplona.amethyst.desktop.platform.TrayGlyph
+import com.vitorpamplona.amethyst.desktop.platform.TrayIconFiles
+import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
+import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
+import com.vitorpamplona.amethyst.desktop.platform.defaultWindowSize
+import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.platform.titleBarWindowDrag
+import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
+import com.vitorpamplona.amethyst.desktop.service.bench.ScrollBenchmark
+import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
+import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
+import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalChromiumVideoEngine
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
+import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
+import dev.nucleusframework.composenativetray.tray.api.Tray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.awt.Desktop
+import java.awt.Taskbar
+import java.awt.Toolkit
+import java.awt.desktop.AppReopenedListener
+import java.io.File
+import kotlin.concurrent.thread
+import kotlin.system.exitProcess
+
+/** The app's own files: `~/.amethyst/app`, or `-Damethyst.dataDir=...`. */
+internal fun desktopDataDir(): File = File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
+
+/** How long a kept-going print's notification has before the app quits after it. */
+private const val QUIT_AFTER_PRINT_GRACE_MS = 3_000L
+
+/** How long a window shown for a notification click gets to reach the screen before it is raised again. */
+private const val RAISE_SETTLE_MS = 150L
+
+/**
+ * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
+ * Run it with `./gradlew :desktopApp:run`. Its files live apart from the retired legacy app's
+ * (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS keyring, and the
+ * legacy logins are imported on the first start.
+ */
+@OptIn(ExperimentalComposeUiApi::class, FlowPreview::class)
+fun main(args: Array<String>) {
+    // The folder the JVM writes this start's class archive to at exit, in every mode below.
+    StartupArchive.prepare()
+
+    // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
+    // window, no keyring, just the pre-signed posts that are due.
+    if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())
+
+    // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
+    if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
+
+    // First-time native and TLS setup for what the start needs later, on a spare core.
+    StartupWarmUp.start()
+
+    // Which copy of the app this is, settled before anything opens Tor or a cache folder.
+    DesktopInstance.claim()
+    // The primary clears the caches of copies no longer running, off the startup path.
+    if (DesktopInstance.isPrimary) {
+        thread(isDaemon = true, name = "idle-copy-cleanup") {
+            DesktopInstance.removeIdleCopies()
+        }
+    }
+
+    val filesDir = desktopDataDir().apply { mkdirs() }
+
+    // Linux: native Wayland when the session has it, unless settings pick XWayland. Like the macOS
+    // properties below, it must be decided before AWT starts.
+    WaylandDisplay.configure(filesDir)
+    // X11: the desktop's scale (Xft.dpi), read while nothing else talks to the X server yet.
+    DesktopUiScale.readXResources()
+
+    // macOS: the menu bar goes to the top of the screen, under the app's own name. Both must be set
+    // before AWT starts.
+    if (PlatformInfo.isMacOS) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "Amethyst")
+        System.setProperty("apple.awt.application.appearance", "system")
+    }
+    setDockIcon()
+    setX11WindowClass()
+    // Read ahead of the first frame, off the UI thread: the OS fonts (an enumeration of every
+    // installed family) alongside the OS theme (a shell-out), which the first frame needs.
+    thread(isDaemon = true, name = "font-warmup") { PlatformFonts.ui }
+    PlatformAppearance.startupDark
+
+    val isDebug = System.getProperty("amethyst.debug") == "true"
+    Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
+    QuicLogBridge.install()
+
+    // Deep links: on Linux and Windows the OS starts a new process with the URI as argv (%u / %1).
+    // Hand it to the running instance over the instance bus and exit; on a cold start, queue it so
+    // the navigation host routes it once a logged-in shell exists. macOS delivers the URI to the
+    // running app as an open-URI event instead (installed below), never as argv.
+    val linked = DesktopDeepLinks.extractFromArgs(args)
+    linked?.let { uri ->
+        if (DesktopDeepLinks.forwardToRunningInstance(uri, filesDir)) exitProcess(0)
+        DesktopDeepLinks.offer(uri)
+    }
+    // A copy whose window was closed while a print went on is still running, unseen: launching the
+    // app again brings it back, on The Observer, instead of opening a second copy beside it.
+    val keptForPrint = HiddenWindowMarker(filesDir, HiddenWindowMarker.PRINT_FILE)
+    if (linked == null && keptForPrint.present) {
+        if (DesktopDeepLinks.forwardToRunningInstance(HiddenWindowMarker.PRINT_RESTORE_URI, filesDir)) exitProcess(0)
+        // Nobody answered: a copy that died hidden left it behind.
+        keptForPrint.set(false)
+    }
+    // The same for a copy closed to the tray, its NIP-46 signer still answering apps.
+    val keptInTray = HiddenWindowMarker(filesDir, HiddenWindowMarker.TRAY_FILE)
+    if (linked == null && keptInTray.present) {
+        if (DesktopDeepLinks.forwardToRunningInstance(HiddenWindowMarker.TRAY_RESTORE_URI, filesDir)) exitProcess(0)
+        keptInTray.set(false)
+    }
+    DesktopDeepLinks.installOsHandlers()
+    // One listener per data folder: a later copy taking over the port file sent the links meant for
+    // the primary to itself, and removed the file as it quit, leaving the primary with none.
+    if (DesktopInstance.isPrimary) DesktopDeepLinks.startInstanceBus(filesDir)
+
+    val version =
+        System.getProperty("amethyst.version")
+            ?: DesktopAppModules::class.java.`package`?.implementationVersion
+            ?: "dev"
+
+    installDesktopCrashReporter(filesDir, version)
+    val startupKey = startupSetting("AMETHYST_LOGIN", "amethyst.login")
+    val startupSignUpName = startupSetting("AMETHYST_SIGNUP", "amethyst.signup")
+    if (startupKey != null && startupSignUpName != null) {
+        Log.w("AmethystDesktop", "Both AMETHYST_LOGIN and AMETHYST_SIGNUP are set: logging in, not signing up")
+    }
+    val startupLocalRelays =
+        startupSetting("AMETHYST_LOCAL_RELAYS", "amethyst.localRelays")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey, startupSignUpName, startupLocalRelays)
+
+    // Images go through the role builder, so each URL follows the user's Tor choice for images.
+    // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a
+    // signed retry, as on Android.
+    DesktopImageLoaderSetup.setup(
+        clientForUrl = { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) },
+        blossomServerResolver = { modules.blossomResolver },
+        readAuth = modules.blossomReadAuthTokens,
+    )
+    // So do video thumbnails, saves and encrypted media, which those clients also decrypt, and
+    // the videos Android would send over Tor: those whose video client has a proxy port now.
+    // Animated GIFs, which skip Coil to keep every frame, take the image role like Coil does.
+    MediaHttp.install(
+        clientFor = modules.roleBasedHttpClientBuilder::okHttpClientForVideo,
+        keyCache = modules.keyCache,
+        viaTor = { url -> modules.roleBasedHttpClientBuilder.proxyPortForVideo(url) != null },
+        imageClientFor = modules.roleBasedHttpClientBuilder::okHttpClientForImage,
+    )
+
+    modules.initiate()
+
+    // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
+    val nappletHost = DesktopNappletHost(modules)
+    // Audio the audio engine can't decode (WebM, Ogg) plays in the same Chromium.
+    GlobalMediaPlayer.chromiumEngine = nappletHost.engine
+
+    // A crash or a kill comes through here; a quit has shut Chromium down already (below). The
+    // settings go first and Chromium last: its teardown can wait out its 3 s bound.
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            runCatching { modules.flushUiPrefs() }
+            runCatching { modules.flushAccountSettings() }
+            // Releases the native video and audio engines before the JVM goes.
+            GlobalMediaPlayer.shutdown()
+            modules.torManager.stopSync()
+            runCatching { nappletHost.shutdown() }
+        },
+    )
+
+    val services = DesktopAppServices(modules)
+    val spellCheck = DesktopSpellCheck(filesDir, version, modules.uiPrefs.spellCheck, modules.applicationIOScope)
+    // Read now, off the UI thread, so the first composer dialog doesn't wait on the disk.
+    val composerDialogSizes = ScreenWindowSizes(File(filesDir, "composer-dialog-sizes.properties"))
+    modules.applicationIOScope.launch { composerDialogSizes.preload() }
+    val platform =
+        DesktopAppPlatform(
+            appVersionName = version,
+            isDebugBuild = isDebug,
+            notifications = modules.notifications,
+            desktopSpellCheck = spellCheck,
+            // Decrypted pictures of private communities: owner-only, like the rest of the profile.
+            concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
+            nappletHost = nappletHost,
+            composerDialogSizes = DesktopComposerDialogSizes(composerDialogSizes),
+        )
+    val root = DesktopAppRoot(modules, nappletHost)
+
+    // Chromium has to shut down before the JVM starts exiting, while the app's threads still run: on
+    // macOS it must go on the main thread, and jcefmaven's own exit hook would otherwise do it on the
+    // AWT thread and crash the app as it quits.
+    application(exitProcessOnExit = false) {
+        // Opens where it was left; the first time, or when that spot is off every screen now, at the
+        // default size in the middle of the screen.
+        val savedBounds = remember { SavedWindowBounds(File(filesDir, "window-bounds.properties")) }
+        val windowState =
+            remember {
+                val saved = savedBounds.load()
+                if (saved != null) {
+                    WindowState(placement = saved.placement, position = saved.position, size = saved.size)
+                } else {
+                    WindowState(size = defaultWindowSize(), position = WindowPosition.Aligned(Alignment.Center))
+                }
+            }
+
+        // Saved as it changes, once the user stops dragging or resizing, so even a crash keeps it.
+        LaunchedEffect(windowState) {
+            var lastFloating = savedBounds.load()?.copy(maximized = false)
+            snapshotFlow { windowState.boundsToSave(lastFloating) }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .debounce(500)
+                .collect { bounds ->
+                    if (!bounds.maximized) lastFloating = bounds
+                    withContext(Dispatchers.IO) { savedBounds.save(bounds) }
+                }
+        }
+
+        // Closing the main window while screen windows are open only hides it; the app quits once
+        // the last of them closes too.
+        val windows = root.navigator.windows
+
+        // A print runs in this process: quitting would stop it, and it may be paid for already. Every
+        // way out (the window's close, Quit, its shortcut, the updater) asks first while one runs.
+        val printers = modules.frontPagePrinters
+        var askQuit by remember { mutableStateOf(false) }
+        val printingNow = { PrintQuitRules.printing(printers.printing.value.values, printers.pressHeld.value) }
+        val quitScope = rememberCoroutineScope()
+        val quit: () -> Unit = {
+            keptForPrint.set(false)
+            keptInTray.set(false)
+            exitApplication()
+        }
+        // The question shows in the main window, brought back for it.
+        val askInMainWindow: () -> Unit = {
+            windows.showMainWindow()
+            askQuit = true
+        }
+        val requestQuit: () -> Unit = {
+            when (PrintQuitRules.onQuit(printingNow())) {
+                CloseAction.ASK -> askInMainWindow()
+                else -> quit()
+            }
+        }
+
+        // An account's NIP-46 signer keeps answering apps once the window is closed, as Android's runs
+        // from a background service: the app stays up in the tray (and quits where there is no tray),
+        // and the tray's own Quit, the menu's or Cmd+Q end it.
+        val signerRunning by remember { modules.accountsCache.anySignerRunning() }.collectAsState(false)
+        // The tray icon's files while a tray can show; null when there is none (closing then quits).
+        // Windows and Linux draw from these files, not a Painter: a Painter is drawn off-screen
+        // first, which can fail (no DirectX 12 on Windows), leaving no icon while the window hides.
+        // macOS draws a one-colour vector instead (TrayGlyph), as its menu bar expects.
+        var trayIcon by remember { mutableStateOf<TrayIconFiles?>(null) }
+        val trayIconDir = remember { File(filesDir, "tray") }
+        LaunchedEffect(signerRunning, trayIcon == null) {
+            if (!signerRunning || trayIcon != null) return@LaunchedEffect
+            // A Linux tray host can start after the app does (the AppIndicator extension turned on):
+            // ask again now and then while there is none. Windows and macOS don't change their answer.
+            while (true) {
+                trayIcon = withContext(Dispatchers.IO) { if (SystemTrayHost.available()) IconResources.trayIconFiles(trayIconDir) else null }
+                if (trayIcon != null || !PlatformInfo.isLinux) break
+                delay(SystemTrayHost.RECHECK_MS)
+            }
+        }
+        val showFromBackground: () -> Unit =
+            remember(windowState, windows) {
+                {
+                    windowState.isMinimized = false
+                    windows.showMainWindow()
+                    DesktopDeepLinks.requestForeground()
+                }
+            }
+        // Where closing the main window would quit: true when the app keeps running instead. The icon
+        // is checked first (a tray host can go away while the app runs, and the library starts no
+        // icon without a word when it can't), off the UI thread, and the app quits after all when it
+        // isn't up: the window never hides with no icon to return by.
+        // The first time, while the window is still on screen, it says where the app went instead.
+        val trayExplained = remember { TrayExplainedMarker(filesDir) }
+        var explainTray by remember { mutableStateOf(false) }
+        val keepRunningInBackground: () -> Boolean = {
+            when (BackgroundCloseRules.onClose(signerRunning, trayIcon != null)) {
+                BackgroundClose.QUIT -> false
+                BackgroundClose.TRAY -> {
+                    quitScope.launch {
+                        if (withContext(Dispatchers.IO) { SystemTrayHost.showing() }) {
+                            if (windows.mainWindowVisible && !trayExplained.present) {
+                                explainTray = true
+                            } else {
+                                windows.hideToTray(root.navigator.stacks?.arrangement)
+                            }
+                        } else {
+                            trayIcon = null
+                            quit()
+                        }
+                    }
+                    true
+                }
+            }
+        }
+        LaunchedEffect(windows) { snapshotFlow { windows.keptInTray }.collect { keptInTray.set(it) } }
+        val currentRequestQuit by rememberUpdatedState(requestQuit)
+        val icon = trayIcon
+        if (signerRunning && icon != null) {
+            val openLabel = stringRes(Res.string.desktop_tray_open)
+            val quitLabel = stringRes(Res.string.desktop_tray_quit)
+            // Remembered: the tray rebuilds its native menu whenever these lambdas change identity.
+            val trayMenu: TrayMenuBuilder.() -> Unit =
+                remember(openLabel, quitLabel, showFromBackground) {
+                    {
+                        Item(openLabel) { showFromBackground() }
+                        Item(quitLabel) { currentRequestQuit() }
+                    }
+                }
+            val tooltip = stringRes(Res.string.desktop_tray_tooltip)
+            if (PlatformInfo.isMacOS) {
+                // The menu bar's own style: a one-colour gem the library draws black or white to
+                // match the bar's appearance, switching as it changes.
+                Tray(icon = TrayGlyph.vector, tooltip = tooltip, primaryAction = showFromBackground, menuContent = trayMenu)
+            } else {
+                @Suppress("DEPRECATION")
+                Tray(iconPath = icon.png, windowsIconPath = icon.ico, tooltip = tooltip, primaryAction = showFromBackground, menuContent = trayMenu)
+            }
+        }
+        // macOS: a click on the Dock icon brings back a window closed to the tray.
+        DisposableEffect(Unit) {
+            val reopen = AppReopenedListener { showFromBackground() }
+            val listening =
+                runCatching {
+                    Desktop.isDesktopSupported() &&
+                        Desktop.getDesktop().isSupported(Desktop.Action.APP_EVENT_REOPENED) &&
+                        Desktop.getDesktop().addAppEventListener(reopen).let { true }
+                }.getOrDefault(false)
+            onDispose { if (listening) runCatching { Desktop.getDesktop().removeAppEventListener(reopen) } }
+        }
+
+        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
+        LaunchedEffect(Unit) { modules.quitRequests.collect { requestQuit() } }
+
+        // Kept going with the window closed: nobody sees a screen, so the end is announced, and a
+        // relaunch finds this copy.
+        LaunchedEffect(windows) {
+            snapshotFlow { windows.keptForPrint }.collect { kept ->
+                printers.readerAway.value = kept
+                keptForPrint.set(kept)
+            }
+        }
+        // Once that print ends (its "ready" notification is out by then), the app quits, as the
+        // reader asked when they closed it, unless they came back meanwhile.
+        LaunchedEffect(windows) {
+            // Not until the press is let go: a scheduled run still writes its `ran` after the print.
+            combine(snapshotFlow { windows.keptForPrint to windows.anyShowing }, printers.printing, printers.pressHeld) { (kept, showing), jobs, held ->
+                PrintQuitRules.quitsAfterPrint(kept, PrintQuitRules.printing(jobs.values, held), showing)
+            }.distinctUntilChanged().collectLatest { done ->
+                if (done) {
+                    delay(QUIT_AFTER_PRINT_GRACE_MS)
+                    // The signer still answering apps: back to the tray rather than out.
+                    if (!keepRunningInBackground()) quit()
+                }
+            }
+        }
+        // A click on one of the app's notifications brings the window back, whether it was hidden
+        // for a print, minimized or behind another app. Showing it also calls off the quit waiting
+        // above: the reader is back.
+        LaunchedEffect(windows) {
+            modules.notifications.clicks.raises.collect {
+                windowState.isMinimized = false
+                windows.showMainWindow()
+                // Raised again once the OS has it on screen: a frame shown this instant ignores toFront.
+                delay(RAISE_SETTLE_MS)
+                windows.showMainWindow()
+                DesktopDeepLinks.requestForeground()
+            }
+        }
+        LaunchedEffect(windows) {
+            snapshotFlow { windows.allClosed }
+                .filter { it }
+                // The last screen window closed with the main one hidden: a print running asks first.
+                .collect {
+                    windows.onAllClosed(
+                        root.navigator.stacks?.arrangement,
+                        quit,
+                        printingNow(),
+                        ask = askInMainWindow,
+                        keepRunning = keepRunningInBackground,
+                    )
+                }
+        }
+
+        // Bumped to rebuild the window after a crash the user reports from the crash window: the
+        // crashed composition can't be reused, but the session, account and size carry over.
+        var windowGeneration by remember { mutableIntStateOf(0) }
+        val exceptionHandlerFactory =
+            remember {
+                AmethystWindowExceptionHandlerFactory { report ->
+                    services.sendCrashReport(report)
+                    windowGeneration++
+                }
+            }
+
+        // A crash in the window's UI shows our crash window, not Compose's bare system "Error" box.
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
+            key(windowGeneration) {
+                AppWindow(
+                    onCloseRequest = {
+                        windows.closeMainWindow(
+                            root.navigator.stacks?.arrangement,
+                            quit,
+                            printingNow(),
+                            ask = { askQuit = true },
+                            keepRunning = keepRunningInBackground,
+                        )
+                    },
+                    state = windowState,
+                    title = "Amethyst",
+                    icon = IconResources.adaptedBitmapPainter,
+                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = requestQuit) },
+                    visible = windows.mainWindowVisible,
+                ) {
+                    windows.MainWindowEffects(window)
+                    // `-Damethyst.scrollBench=<dir>`: scrolls the feed, writes frame timings, exits.
+                    ScrollBenchmark.Run(window)
+
+                    // The screens see the window stopped while it is hidden (the tray, a print), as
+                    // Android's do in the background: their feeds let go of the relays after the
+                    // grace period, and only each account's notifications and the signer stay.
+                    val windowLifecycle = LocalLifecycleOwner.current
+                    val screensLifecycle = remember(windowLifecycle) { HiddenWindowLifecycle(windowLifecycle) }
+                    DisposableEffect(screensLifecycle) { onDispose { screensLifecycle.dispose() } }
+                    // Collected, not read in a SideEffect: a hidden window may never recompose, and
+                    // the change has to reach the screens all the same.
+                    LaunchedEffect(screensLifecycle) {
+                        snapshotFlow { windows.mainWindowVisible }.collect { visible -> screensLifecycle.hidden = !visible }
+                    }
+                    // macOS: the title bar turns transparent over the app, which draws its own strip there.
+                    frameScope?.applyNativeWindowChrome()
+
+                    frameScope?.DesktopMenuBar(root.navigator, onQuit = requestQuit)
+
+                    // The window's root store, the parent of the account-scoped one that AmethystApp
+                    // nests under it per logged-in account.
+                    val windowViewModels =
+                        remember {
+                            object : ViewModelStoreOwner {
+                                override val viewModelStore = ViewModelStore()
+                            }
+                        }
+
+                    // Set while a video plays in the OS full-screen overlay.
+                    val immersiveFullscreen = remember { mutableStateOf(false) }
+
+                    val systemDark by rememberSystemDark(window)
+
+                    // Set while the wheel scrolls: hover hides then, so the feed doesn't blink under the pointer.
+                    val wheelScrolling = remember { mutableStateOf(false) }
+
+                    // Hover shows only while the window is in front, as in native apps, and not mid-scroll.
+                    DesktopTheme(modules, systemDark, showHover = LocalWindowInfo.current.isWindowFocused && !wheelScrolling.value) {
+                        NowProvider {
+                            CompositionLocalProvider(
+                                LocalViewModelStoreOwner provides windowViewModels,
+                                LocalLifecycleOwner provides screensLifecycle,
+                                LocalAppServices provides services,
+                                LocalAppPlatform provides platform,
+                                LocalNotePlatform provides DesktopNotePlatform,
+                                LocalRichTextPlatform provides DesktopRichTextPlatform,
+                                LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
+                                // The lightbox and the video player go full screen through the AWT window.
+                                LocalAwtWindow provides window,
+                                LocalChromiumVideoEngine provides nappletHost.engine,
+                                LocalIsImmersiveFullscreen provides immersiveFullscreen,
+                                LocalDrawerMetrics provides DesktopDrawerMetrics,
+                                // Throws when no app can open a link, as on Android, so a wallet
+                                // handoff that goes nowhere can say so.
+                                LocalUriHandler provides DesktopUriHandler,
+                            ) {
+                                // Under macOS's transparent title bar the screens draw their own top
+                                // bars, padded past the traffic lights by the caption-bar inset, as on
+                                // Android under the status bar. Full screen has no title bar.
+                                val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+                                // The app moves the window from that band once AppKit no longer does, so its
+                                // tabs can be dragged to a new place.
+                                var titleBarTakenOver by remember { mutableStateOf(false) }
+                                TakeOverTitleBar(window) { titleBarTakenOver = true }
+                                // A click on the window in the background only brings it forward.
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .clickToActivate(window, LocalWindowInfo.current)
+                                        .trackWheelScrolling(wheelScrolling)
+                                        .titleBarWindowDrag(window, if (titleBarTakenOver) titleBar else 0.dp),
+                                ) {
+                                    Column(Modifier.fillMaxSize()) {
+                                        ProvideTitleBarInsets(titleBar) {
+                                            // The window's size reads 0 x 0 until its first layout. Composed before
+                                            // then, the app picked the phone layout, composed all of it and threw it
+                                            // away a frame later for the real one: ~1.2 s of a cold start's UI thread.
+                                            // Latched: once sized, a later 0 x 0 report (a hidden or minimized window on
+                                            // some platforms) must not tear down the account, its screens and subscriptions.
+                                            val windowInfo = LocalWindowInfo.current
+                                            var windowSized by remember { mutableStateOf(windowInfo.containerSize != IntSize.Zero) }
+                                            if (!windowSized) {
+                                                LaunchedEffect(windowInfo) {
+                                                    snapshotFlow { windowInfo.containerSize }.first { it != IntSize.Zero }
+                                                    windowSized = true
+                                                }
+                                            }
+                                            Box(Modifier.weight(1f).fillMaxWidth()) {
+                                                if (windowSized) {
+                                                    // Claude Code sessions waiting on the user, beside their drawer item.
+                                                    CompositionLocalProvider(LocalDrawerBadges provides mapOf(NavBarItem.CLAUDE_CODE to ClaudeCodeService.shared.needsYou)) {
+                                                        AmethystApp(modules.sessionManager, root)
+                                                    }
+                                                }
+                                                // Toasts show here unless a screen window has the focus (it shows them).
+                                                if (windows.focusedScreenWindow == null) {
+                                                    SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                                }
+                                                if (askQuit) {
+                                                    PrintQuitDialog(
+                                                        onKeepPrinting = {
+                                                            askQuit = false
+                                                            MacQuitResponse.declined()
+                                                            windows.hideForPrint()
+                                                        },
+                                                        onQuit = {
+                                                            askQuit = false
+                                                            // Quit once the cancelled runs have recorded it (or a few
+                                                            // seconds passed): a morning cancelled unrecorded resumes
+                                                            // at the next launch.
+                                                            quitScope.launch {
+                                                                printers.cancelAllAndSettle()
+                                                                quit()
+                                                            }
+                                                        },
+                                                        onDismiss = {
+                                                            askQuit = false
+                                                            MacQuitResponse.declined()
+                                                        },
+                                                    )
+                                                }
+                                                if (explainTray) {
+                                                    TrayExplainDialog(
+                                                        onKeepRunning = {
+                                                            explainTray = false
+                                                            trayExplained.set()
+                                                            windows.hideToTray(root.navigator.stacks?.arrangement)
+                                                        },
+                                                        onQuit = {
+                                                            explainTray = false
+                                                            trayExplained.set()
+                                                            requestQuit()
+                                                        },
+                                                        // Dismissed: the window stays, and the next close asks again.
+                                                        onDismiss = { explainTray = false },
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        // Whatever plays keeps playing across screens and after its card
+                                        // scrolls away; this bar is where it is paused, seeked or stopped.
+                                        NowPlayingBar()
+                                    }
+                                    // The video player's full-screen button: the playing video over the
+                                    // whole window, in OS full screen.
+                                    GlobalFullscreenOverlay()
+
+                                    // Each open napplet, in its own window.
+                                    DesktopNappletWindows(nappletHost)
+
+                                    // A NIP-46 app asking this desktop's bunker, in a window of its own.
+                                    Nip46ConsentWindows(modules.nip46Consent, onQuestion = { windows.showMainWindow() })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Every window is closed: the Quit menu, the updater, the last window's close button.
+    runCatching { nappletHost.shutdown() }
+    exitProcess(0)
+}
+
+/**
+ * How a test run skips the login screen: `AMETHYST_LOGIN=nsec1...` logs in with that key and
+ * `AMETHYST_SIGNUP="Name"` signs up a new account, from the environment or as `-Damethyst.login=` /
+ * `-Damethyst.signup=` (which `ps` shows, so never a private key there). The property is cleared
+ * once read, so nothing later in the process finds it.
+ */
+private fun startupSetting(
+    env: String,
+    property: String,
+): String? {
+    val fromProperty = System.getProperty(property)
+    System.clearProperty(property)
+    return (System.getenv(env) ?: fromProperty)?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+/**
+ * The shared Material theme, driven by the UI settings the user picked in the app, in the OS's own
+ * look: "system" theme follows the OS's dark/light setting, "system" font is the OS's UI font, and
+ * icons take the stroke weight of the OS's own icons. The colors stay the app's.
+ */
+@Composable
+private fun DesktopTheme(
+    modules: DesktopAppModules,
+    systemDark: Boolean,
+    showHover: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val prefs = modules.uiPrefs
+    val theme by prefs.theme.collectAsState()
+    val accentColor = collectAccentColor(modules.sessionManager, prefs.accentColor)
+    val fontFamily by prefs.fontFamily.collectAsState()
+    val fontSize by prefs.fontSize.collectAsState()
+    val displaySettings = collectDisplaySettings(modules.uiState)
+
+    AmethystMaterialTheme(
+        darkTheme = isDarkTheme(theme, systemDark),
+        accentColor = accentColor,
+        fontFamily = fontFamily,
+        fontSize = fontSize,
+        displaySettings = displaySettings,
+        systemFontFamily = PlatformFonts.ui,
+        iconWeight = PlatformIconWeight.current,
+        typography = DesktopTypography,
+        showHover = showHover,
+        content = content,
+    )
+}
+
+/**
+ * X11 (and XWayland) docks and app switchers find a window's app by its WM_CLASS, matched against the
+ * `StartupWMClass` of the app's desktop entry. AWT names it after the main class
+ * (`com-vitorpamplona-amethyst-desktop-app-AmethystDesktopKt`), which no entry declares, so the
+ * switcher showed a generic icon and no app name. AWT reads the name when it creates each window, so
+ * this runs before the first one. Needs `--add-opens java.desktop/sun.awt.X11` (set in the build).
+ */
+private fun setX11WindowClass() {
+    try {
+        val toolkit = Toolkit.getDefaultToolkit()
+        if (toolkit.javaClass.name != "sun.awt.X11.XToolkit") return
+        toolkit.javaClass
+            .getDeclaredField("awtAppClassName")
+            .apply { isAccessible = true }
+            .set(null, "Amethyst")
+    } catch (e: Exception) {
+        Log.w("AmethystDesktop", "Could not set the window class", e)
+    }
+}
+
+/**
+ * The dock and app-switcher icon. macOS reads it from the Taskbar API, not from the window's icon,
+ * so without this a JVM started from Gradle shows the generic Java icon.
+ */
+private fun setDockIcon() {
+    try {
+        // Asked first: only macOS takes an icon image, and decoding it cost ~85 ms of the start.
+        if (!Taskbar.isTaskbarSupported()) return
+        val taskbar = Taskbar.getTaskbar()
+        if (!taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) return
+        taskbar.iconImage = IconResources.adaptedBufferedImage ?: return
+    } catch (e: Exception) {
+        Log.w("AmethystDesktop", "Could not set the dock icon", e)
+    }
+}
