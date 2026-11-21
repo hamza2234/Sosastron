@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultHiddenDrawerItems
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.util.getDefaultLanguageCode
 import com.vitorpamplona.amethyst.commons.util.getLanguagesSpokenByUser
@@ -189,8 +190,13 @@ class AccountMessagesPreferencesInternal(
 
 @Serializable
 class AccountFeedPreferencesInternal(
-    /** The home tabs switched OFF, as [HomeFeedType.encode] codes, so a new tab defaults to on. */
-    val disabledHomeFeedTypes: String = "",
+    /**
+     * The home content types switched OFF, as [HomeFeedType.encode] codes. Defaulted to everything
+     * outside [HomeFeedType.DEFAULT_ENABLED], so a blob written before the setting existed (or an
+     * account that never opened the screen) lands on the media-first Home instead of the old
+     * everything-on feed. An explicitly empty string still means every type is on.
+     */
+    val disabledHomeFeedTypes: String = HomeFeedType.encode(HomeFeedType.ALL - HomeFeedType.DEFAULT_ENABLED),
     /** Each screen's selected filter: [com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot] name to TopFilter JSON. */
     val feedFilters: Map<String, String> = emptyMap(),
     /** The feeds the user built, as [com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer] JSON. */
@@ -253,7 +259,7 @@ class AccountNavigationPreferencesInternal(
     // newer client would fail the enum decoder and take the whole synced-settings
     // blob down with it, so unknown names are dropped on read instead (the same
     // approach AccountPoWPreferencesInternal.enabledCategories takes).
-    var hiddenDrawerItems: List<String> = emptyList(),
+    var hiddenDrawerItems: List<String> = DefaultHiddenDrawerItems,
 )
 
 @Serializable

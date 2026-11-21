@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.preferences
 
 import com.vitorpamplona.amethyst.commons.model.AccountNavigationPreferencesInternal
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultHiddenDrawerItems
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
 import com.vitorpamplona.amethyst.commons.model.navigation.toNames
@@ -35,17 +36,22 @@ import org.junit.Test
  */
 class DrawerPersistenceTest {
     @Test
-    fun defaultIsAnUntouchedMenu() {
+    fun defaultDrawerIsTheQuietMenu() {
         val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>(JsonMapper.toJson(AccountNavigationPreferencesInternal()))
 
-        assertEquals(emptyList<String>(), decoded.hiddenDrawerItems)
+        assertEquals(DefaultHiddenDrawerItems, decoded.hiddenDrawerItems)
     }
 
     @Test
-    fun blobWrittenBeforeTheFieldExistedDecodesToAnUntouchedMenu() {
-        // Every existing account is in this state, and so is every account that never opens the
-        // screen — which is exactly why the preference stores hidden rows rather than visible ones.
+    fun blobWrittenBeforeTheFieldExistedDecodesToTheQuietMenu() {
         val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>("{}")
+
+        assertEquals(DefaultHiddenDrawerItems, decoded.hiddenDrawerItems)
+    }
+
+    @Test
+    fun explicitEmptyListMeansEveryRowIsVisible() {
+        val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>("""{"hiddenDrawerItems":[]}""")
 
         assertEquals(emptyList<String>(), decoded.hiddenDrawerItems)
     }

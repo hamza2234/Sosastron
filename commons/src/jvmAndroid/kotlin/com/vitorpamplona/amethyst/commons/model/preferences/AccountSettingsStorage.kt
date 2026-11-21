@@ -804,7 +804,10 @@ private fun readInboxPrefs(
     relayGroupViewMode = RelayGroupViewMode.fromName(feedVisibility.relayGroupViewMode),
     concordViewMode = ConcordViewMode.fromName(feedVisibility.concordViewMode),
     enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(feedVisibility.disabledChatFeeds),
-    enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(feedVisibility.disabledHomeFeedTypes),
+    enabledHomeFeedTypes =
+        feedVisibility.disabledHomeFeedTypes
+            ?.let { HomeFeedType.ALL - HomeFeedType.decode(it) }
+            ?: HomeFeedType.DEFAULT_ENABLED,
     relayAuthTrustMyRelays = relayAuth.trustMyRelays,
     relayAuthTrustReadFollows = relayAuth.trustReadFollows,
     relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,

@@ -316,8 +316,8 @@ class AccountSettings(
     // from the inbox and dropped from the always-on downloading routes. Defaults to everything on.
     val enabledChatFeeds: MutableStateFlow<Set<ChatFeedType>> = MutableStateFlow(ChatFeedType.ALL),
     // Which event-kind groups the Home feed downloads (assembler) and renders (DAL). A disabled group
-    // is both dropped from the always-on home relay filters and hidden from the tabs. Everything on by default.
-    val enabledHomeFeedTypes: MutableStateFlow<Set<HomeFeedType>> = MutableStateFlow(HomeFeedType.ALL),
+    // is both dropped from the always-on home relay filters and hidden from the tabs.
+    val enabledHomeFeedTypes: MutableStateFlow<Set<HomeFeedType>> = MutableStateFlow(HomeFeedType.DEFAULT_ENABLED),
     // The per-situation toggles applied under RelayAuthPolicy.CUSTOM.
     val relayAuthTrustMyRelaysAndVenues: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val relayAuthTrustReadFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),

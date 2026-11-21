@@ -152,7 +152,7 @@ class UiSettingsStore(
          * install that never touched them.
          */
         fun read(preferences: Preferences): UiSettings {
-            val featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED
+            val featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.PERFORMANCE
 
             return UiSettings(
                 theme = preferences[UI_THEME]?.let { ThemeType.valueOf(it) } ?: ThemeType.SYSTEM,
@@ -173,7 +173,7 @@ class UiSettingsStore(
                         ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                 automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                 showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
-                showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
+                showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: false,
                 showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
                 showProfileBadges = preferences[UI_SHOW_PROFILE_BADGES] ?: true,
                 showProfileAppRecommendations = preferences[UI_SHOW_PROFILE_APP_RECOMMENDATIONS] ?: true,
@@ -194,7 +194,7 @@ class UiSettingsStore(
                         ?: SpellCheckType.AUTOMATIC,
                 noteLayout =
                     preferences[UI_NOTE_LAYOUT]?.let { name -> NoteLayoutType.entries.firstOrNull { it.name == name } }
-                        ?: NoteLayoutType.AUTHOR_COLUMN,
+                        ?: NoteLayoutType.EDGE_TO_EDGE,
                 automaticallyDownloadTranslationModels =
                     preferences[UI_DOWNLOAD_TRANSLATION_MODELS]?.let { name -> ConnectivityType.entries.firstOrNull { it.name == name } }
                         ?: ConnectivityType.WIFI_ONLY,

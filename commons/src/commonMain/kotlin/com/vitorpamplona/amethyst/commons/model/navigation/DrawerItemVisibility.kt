@@ -32,6 +32,14 @@ package com.vitorpamplona.amethyst.commons.model.navigation
 val MandatoryDrawerItems: Set<NavBarItem> = setOf(NavBarItem.SETTINGS)
 
 /**
+ * The rows Astro hides out of the box. The drawer opens as a short menu: the account header on top,
+ * then Nests, Settings and the account switcher. Every other row is one tap away in Settings > Side
+ * Menu, so nothing is lost — only the default changes.
+ */
+val DefaultHiddenDrawerItems: List<String> =
+    (NavBarItem.entries.toSet() - MandatoryDrawerItems - setOf(NavBarItem.NESTS)).map { it.name }.sorted()
+
+/**
  * Pure show/hide rules for the drawer's catalog rows, kept free of Compose and Android so they are
  * exercised directly by unit tests (DrawerItemVisibilityTest) rather than only through the UI.
  *

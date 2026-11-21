@@ -138,8 +138,17 @@ enum class HomeFeedType(
     ;
 
     companion object {
-        /** Every group, enabled by default so a fresh (or never-customized) account loads everything. */
+        /** Every group. */
         val ALL: Set<HomeFeedType> = entries.toSet()
+
+        /**
+         * What Astro's Home shows out of the box: a media-first timeline (pictures, videos, shorts,
+         * voice notes) with text notes and reposts, which is what makes it read like Instagram.
+         * The niche groups (chess, birds, attestations, git, calendars, torrents, polls…) stay off
+         * until the user turns them back on in Settings > Home > Content types.
+         */
+        val DEFAULT_ENABLED: Set<HomeFeedType> =
+            setOf(TEXT_NOTES, REPOSTS, PICTURES, VIDEOS, SHORTS, VOICE)
 
         fun fromCode(code: String?): HomeFeedType? = entries.firstOrNull { it.code == code }
 
