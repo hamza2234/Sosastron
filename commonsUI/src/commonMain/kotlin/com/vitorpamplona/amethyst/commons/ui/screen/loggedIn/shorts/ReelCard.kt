@@ -27,9 +27,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,13 +50,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.BoostWithDialog
 import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
@@ -84,6 +91,7 @@ fun ReelCard(
 ) {
     val event = (baseNote.event as? VideoEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
+    val bottomInset = reelBottomInset()
 
     Box(
         modifier =
@@ -112,7 +120,7 @@ fun ReelCard(
                 Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(end = 88.dp, bottom = 16.dp, start = 12.dp),
+                    .padding(end = 88.dp, bottom = 16.dp + bottomInset, start = 12.dp),
         )
 
         ReelActionRail(
@@ -122,9 +130,29 @@ fun ReelCard(
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 6.dp, bottom = 24.dp),
+                    .padding(end = 6.dp, bottom = 24.dp + bottomInset),
         )
     }
+}
+
+/**
+ * What the bottom of the reel must clear right now: the scaffold lays the page out under its bars,
+ * so the caption and the rail step up by however much of the bottom bar is still showing. With
+ * immersive scrolling off that is the whole bar; once it slides away only the system nav bar is
+ * left to clear.
+ */
+@Composable
+private fun reelBottomInset(): Dp {
+    val state = LocalDisappearingBarState.current
+    val density = LocalDensity.current
+    val covered =
+        if (state != null && state.bottomHeightLimit > 0f) {
+            with(density) { (state.bottomHeightLimit * (1f - state.bottomCollapsedFraction)).toDp() }
+        } else {
+            LocalDisappearingScaffoldPadding.current.calculateBottomPadding()
+        }
+    val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return maxOf(covered, navBar)
 }
 
 /** Author row plus the reel's title and text, over a gradient so white type stays readable. */

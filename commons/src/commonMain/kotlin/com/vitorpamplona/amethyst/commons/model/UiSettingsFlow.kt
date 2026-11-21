@@ -34,7 +34,7 @@ class UiSettingsFlow(
     val automaticallyStartPlayback: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val automaticallyPlayVideos: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyShowUrlPreview: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
-    val automaticallyHideNavigationBars: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val automaticallyHideNavigationBars: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.NEVER),
     val automaticallyShowProfilePictures: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val dontShowPushNotificationSelector: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val dontAskForNotificationPermissions: MutableStateFlow<Boolean> = MutableStateFlow(false),
