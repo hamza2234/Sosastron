@@ -122,6 +122,7 @@
     <string name="number_followers">%1$s متابِع</string>
     <string name="log_out">تسجيل الخروج</string>
     <string name="show_more">إظهار المزيد</string>
+    <string name="show_less">إظهار أقل</string>
     <string name="lightning_invoice">Lightning فاتورة</string>
     <string name="invoice_expired">منتهي الصلاحية</string>
     <string name="clink_lightning_offer">عرض CLINK</string>

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -120,7 +119,7 @@ fun DrawBanner(
             if (loadingUrl != null && isAnimatedGifUrl(loadingUrl)) {
                 // A GIF banner plays like one: looping, silent, no controls. The image loader would
                 // only draw its first frame on desktop.
-                if (!hasPreviewHash) DefaultProfileBanner(Modifier.matchParentSize(), 1)
+                if (!hasPreviewHash) DefaultProfileBanner(Modifier.matchParentSize())
                 AnimatedImage(
                     url = loadingUrl,
                     contentDescription = bannerMeta?.alt ?: stringRes(id = Res.string.profile_image),
@@ -150,14 +149,10 @@ fun DrawBanner(
             )
         }
     } else {
-        Image(
-            painter = painterRes(Res.drawable.profile_banner, 2),
-            contentDescription = stringRes(id = Res.string.profile_banner),
-            contentScale = ContentScale.FillWidth,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(190.dp),
+        DefaultProfileBanner(
+            Modifier
+                .fillMaxWidth()
+                .height(190.dp),
         )
     }
 }

@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,9 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -58,7 +64,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -69,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ShareReaction
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
@@ -155,7 +166,10 @@ private fun reelBottomInset(): Dp {
     return maxOf(covered, navBar)
 }
 
-/** Author row plus the reel's title and text, over a gradient so white type stays readable. */
+/**
+ * Author row plus the reel's title and text. There is no scrim behind it: the type carries its own
+ * shadow so white stays readable over bright video without a visible box around the caption.
+ */
 @Composable
 private fun ReelCaption(
     baseNote: Note,
@@ -168,17 +182,18 @@ private fun ReelCaption(
     val text = remember(event) { (event as? Event)?.content.orEmpty() }
     val body = remember(text, title) { text.takeIf { it.isNotBlank() && it != title } }
     val author = baseNote.author
+    var expanded by remember(baseNote.idHex) { mutableStateOf(false) }
+    var overflowing by remember(baseNote.idHex) { mutableStateOf(false) }
 
-    Column(
-        modifier =
-            modifier.background(
-                Brush.verticalGradient(
-                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)),
-                ),
-            ),
-    ) {
+    Column(modifier = modifier) {
         if (author != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable { nav.nav(Route.Profile(author.pubkeyHex)) },
+            ) {
                 UserPicture(
                     userHex = author.pubkeyHex,
                     size = 30.dp,
@@ -190,7 +205,7 @@ private fun ReelCaption(
                 Text(
                     text = author.toBestDisplayName(),
                     color = Color.White,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.merge(ReelCaptionShadow),
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -203,7 +218,7 @@ private fun ReelCaption(
             Text(
                 text = title,
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.merge(ReelCaptionShadow),
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -211,16 +226,64 @@ private fun ReelCaption(
         }
 
         if (body != null) {
+            val annotated =
+                remember(body, nav) {
+                    buildAnnotatedString {
+                        append(body)
+                        hashtagSpans(body).forEach { (start, end, tag) ->
+                            addLink(
+                                LinkAnnotation.Clickable(
+                                    tag = "hashtag:$tag",
+                                    styles = TextLinkStyles(),
+                                    linkInteractionListener = { nav.nav(Route.Hashtag(tag.lowercase())) },
+                                ),
+                                start,
+                                end,
+                            )
+                        }
+                    }
+                }
+
             Text(
-                text = body,
-                color = Color.White.copy(alpha = 0.88f),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
+                text = annotated,
+                color = Color.White.copy(alpha = 0.92f),
+                style = MaterialTheme.typography.bodyMedium.merge(ReelCaptionShadow),
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
                 overflow = TextOverflow.Ellipsis,
+                onTextLayout = { layout -> if (!expanded) overflowing = layout.hasVisualOverflow },
             )
+
+            if (overflowing || expanded) {
+                Text(
+                    text = stringRes(if (expanded) Res.string.show_less else Res.string.show_more),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge.merge(ReelCaptionShadow),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { expanded = !expanded }
+                            .padding(vertical = 2.dp, horizontal = 4.dp),
+                )
+            }
         }
     }
 }
+
+private val ReelCaptionShadow =
+    TextStyle(
+        shadow =
+            Shadow(
+                color = Color.Black.copy(alpha = 0.75f),
+                offset = Offset(0f, 1f),
+                blurRadius = 6f,
+            ),
+    )
+
+/** `#tag` ranges in [text], in the order they appear. */
+private fun hashtagSpans(text: String): List<Triple<Int, Int, String>> = ReelHashtag.findAll(text).map { Triple(it.range.first, it.range.last + 1, it.value.removePrefix("#")) }.toList()
+
+private val ReelHashtag = Regex("#[\\p{L}\\p{N}_]+")
 
 /** The vertical action rail: avatar, like, comment, boost, zap, share, menu. */
 @Composable

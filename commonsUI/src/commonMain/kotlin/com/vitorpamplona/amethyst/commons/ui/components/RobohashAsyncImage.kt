@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -168,25 +169,30 @@ fun RobohashFallbackAsyncImage(
             }
         }
     } else {
-        if (loadRobohash) {
-            Image(
-                imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
-                contentDescription = contentDescription,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-                colorFilter = colorFilter,
-            )
-        } else {
-            Image(
-                painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
-                contentDescription = contentDescription,
-                colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-            )
-        }
+        EmptyUserAvatar(modifier = modifier, contentDescription = contentDescription)
+    }
+}
+
+/**
+ * A user who has not set a profile picture: a muted disc with a person glyph, the way a social app
+ * marks "no photo" instead of drawing a generated robot for them.
+ */
+@Composable
+internal fun EmptyUserAvatar(
+    modifier: Modifier = Modifier,
+    contentDescription: String?,
+) {
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Person),
+            contentDescription = contentDescription,
+            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)),
+            modifier = Modifier.fillMaxSize(0.66f),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 

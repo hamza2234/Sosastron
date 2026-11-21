@@ -21,13 +21,19 @@
 package com.vitorpamplona.amethyst.commons.ui.note.elements
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserBanner
@@ -37,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
-import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleHeaderImage
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
@@ -127,26 +132,32 @@ fun BannerImage(
             loadedImageModifier = modifier,
             accountViewModel = accountViewModel,
             onLoadingBackground = {
-                DefaultProfileBanner(modifier, 4)
+                DefaultProfileBanner(modifier)
             },
             onError = {
-                DefaultProfileBanner(modifier, 4)
+                DefaultProfileBanner(modifier)
             },
         )
     } else {
-        DefaultProfileBanner(modifier, 5)
+        DefaultProfileBanner(modifier)
     }
 }
 
+/**
+ * A profile with no banner: a flat muted field with a photo glyph, so the header reads as "nothing
+ * here" instead of showing a generated artwork as if it were the user's own cover.
+ */
 @Composable
-fun DefaultProfileBanner(
-    modifier: Modifier,
-    sizeReference: Int,
-) {
-    Image(
-        painter = painterRes(Res.drawable.profile_banner, sizeReference),
-        contentDescription = stringRes(Res.string.profile_banner),
-        contentScale = ContentScale.Crop,
-        modifier = modifier,
-    )
+fun DefaultProfileBanner(modifier: Modifier) {
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Image,
+            contentDescription = stringRes(Res.string.profile_banner),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            modifier = Modifier.size(36.dp),
+        )
+    }
 }
