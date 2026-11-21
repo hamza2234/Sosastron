@@ -141,15 +141,22 @@ enum class HomeFeedType(
         val ALL: Set<HomeFeedType> = entries.toSet()
 
         /**
-         * What Astro's Home shows out of the box: a media-first timeline (pictures, videos, voice
-         * notes) with text notes and reposts, which is what makes it read like Instagram. Short
-         * videos are not here at all: Reels owns them (see [REELS_ONLY_KINDS]).
+         * What Astro's Home shows out of the box: pictures, videos and audio only, which is what
+         * makes it read as a media feed rather than a timeline. Text notes, reposts and every niche
+         * group (chess, birds, attestations, git, calendars, torrents, polls…) stay off until the
+         * user turns them back on in Settings > Home > Content types.
          *
-         * The niche groups (chess, birds, attestations, git, calendars, torrents, polls…) stay off
-         * until the user turns them back on in Settings > Home > Content types.
+         * Short videos are not here at all: Reels owns them (see [REELS_ONLY_KINDS]).
          */
         val DEFAULT_ENABLED: Set<HomeFeedType> =
-            setOf(TEXT_NOTES, REPOSTS, PICTURES, VIDEOS, VOICE)
+            setOf(PICTURES, VIDEOS, VOICE, MUSIC)
+
+        /**
+         * Bumped whenever [DEFAULT_ENABLED] changes so every account adopts the new set once. A
+         * store or a synced blob written under an older version re-reads the defaults instead of
+         * keeping a set the user never chose; anything the user toggles after that sticks.
+         */
+        const val CONTENT_DEFAULTS_VERSION = 2
 
         fun fromCode(code: String?): HomeFeedType? = entries.firstOrNull { it.code == code }
 

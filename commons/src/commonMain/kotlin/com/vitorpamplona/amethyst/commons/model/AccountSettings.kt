@@ -998,7 +998,12 @@ class AccountSettings(
         }
 
         remote.feeds?.let { group ->
-            enabledHomeFeedTypes.value = HomeFeedType.ALL - HomeFeedType.decode(group.disabledHomeFeedTypes)
+            enabledHomeFeedTypes.value =
+                if (group.homeContentDefaultsVersion < HomeFeedType.CONTENT_DEFAULTS_VERSION) {
+                    HomeFeedType.DEFAULT_ENABLED
+                } else {
+                    HomeFeedType.ALL - HomeFeedType.decode(group.disabledHomeFeedTypes)
+                }
             hideCommunityRulesViolations.value = group.hideCommunityRulesViolations
             decodeCustomFeeds(group.customFeeds)?.let { applyCustomFeeds(it) }
             // By JSON: a decoded filter that carries an id or address never equals the current one,

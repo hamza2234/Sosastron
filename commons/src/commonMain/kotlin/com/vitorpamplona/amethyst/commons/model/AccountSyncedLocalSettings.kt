@@ -82,6 +82,7 @@ fun AccountSyncedSettingsInternal.withLocalGroups(local: SyncedLocalSettings): A
         feeds =
             AccountFeedPreferencesInternal(
                 disabledHomeFeedTypes = HomeFeedType.encode(HomeFeedType.ALL - local.enabledHomeFeedTypes),
+                homeContentDefaultsVersion = HomeFeedType.CONTENT_DEFAULTS_VERSION,
                 feedFilters = encodeFeedFilters(local.feedFilters),
                 customFeeds = FeedDefinitionSerializer.serializeList(local.customFeeds),
                 hideCommunityRulesViolations = local.hideCommunityRulesViolations,

@@ -186,6 +186,7 @@ class AccountSettingsStores(
             FeedVisibility(
                 disabledChatFeeds = ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value),
                 disabledHomeFeedTypes = HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value),
+                homeContentDefaultsVersion = HomeFeedType.CONTENT_DEFAULTS_VERSION,
                 relayGroupViewMode = settings.relayGroupViewMode.value.name,
                 concordViewMode = settings.concordViewMode.value.name,
                 callsEnabled = settings.callsEnabled.value,
@@ -804,10 +805,16 @@ private fun readInboxPrefs(
     relayGroupViewMode = RelayGroupViewMode.fromName(feedVisibility.relayGroupViewMode),
     concordViewMode = ConcordViewMode.fromName(feedVisibility.concordViewMode),
     enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(feedVisibility.disabledChatFeeds),
+    // A store written before the defaults were versioned carries a set the user never picked;
+    // re-read today's defaults once instead of honouring it.
     enabledHomeFeedTypes =
-        feedVisibility.disabledHomeFeedTypes
-            ?.let { HomeFeedType.ALL - HomeFeedType.decode(it) }
-            ?: HomeFeedType.DEFAULT_ENABLED,
+        if ((feedVisibility.homeContentDefaultsVersion ?: 0) < HomeFeedType.CONTENT_DEFAULTS_VERSION) {
+            HomeFeedType.DEFAULT_ENABLED
+        } else {
+            feedVisibility.disabledHomeFeedTypes
+                ?.let { HomeFeedType.ALL - HomeFeedType.decode(it) }
+                ?: HomeFeedType.DEFAULT_ENABLED
+        },
     relayAuthTrustMyRelays = relayAuth.trustMyRelays,
     relayAuthTrustReadFollows = relayAuth.trustReadFollows,
     relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,

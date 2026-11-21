@@ -89,6 +89,21 @@ class HomeFeedTypeTest {
     }
 
     @Test
+    fun defaultHomeIsMediaOnly() {
+        assertEquals(
+            setOf(HomeFeedType.PICTURES, HomeFeedType.VIDEOS, HomeFeedType.VOICE, HomeFeedType.MUSIC),
+            HomeFeedType.DEFAULT_ENABLED,
+        )
+        // Text, reposts and every niche group are opt-in: the user turns them on in settings.
+        val disabled = HomeFeedType.disabledKinds(HomeFeedType.DEFAULT_ENABLED)
+        assertTrue(TextNoteEvent.KIND in disabled)
+        assertTrue(HomeFeedType.REPOSTS.kinds.all { it in disabled })
+        assertFalse(PictureEvent.KIND in disabled)
+        assertFalse(VideoNormalEvent.KIND in disabled)
+        assertFalse(AddressableNormalVideoEvent.KIND in disabled)
+    }
+
+    @Test
     fun shortsNeverReachHome() {
         // Reels owns kinds 22 and 34236: Home drops them even with every toggle on.
         HomeFeedType.REELS_ONLY_KINDS.forEach {

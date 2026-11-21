@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -44,6 +45,11 @@ import okio.IOException
 data class FeedVisibility(
     val disabledChatFeeds: String? = null,
     val disabledHomeFeedTypes: String? = null,
+    /**
+     * The [com.vitorpamplona.amethyst.commons.model.HomeFeedType.CONTENT_DEFAULTS_VERSION] this
+     * account was last brought up to; null on a store written before the defaults were versioned.
+     */
+    val homeContentDefaultsVersion: Int? = null,
     val relayGroupViewMode: String? = null,
     val concordViewMode: String? = null,
     val callsEnabled: Boolean = true,
@@ -64,6 +70,7 @@ class FeedVisibilityStore(
     companion object {
         val disabledChatFeeds = stringPreferencesKey("disabled_chat_feeds")
         val disabledHomeFeedTypes = stringPreferencesKey("disabled_home_feed_types")
+        val homeContentDefaultsVersion = intPreferencesKey("home_content_defaults_version")
         val relayGroupViewMode = stringPreferencesKey("relay_group_view_mode")
         val concordViewMode = stringPreferencesKey("concord_view_mode")
         val callsEnabled = booleanPreferencesKey("calls_enabled")
@@ -95,6 +102,7 @@ class FeedVisibilityStore(
         return FeedVisibility(
             disabledChatFeeds = prefs[disabledChatFeeds],
             disabledHomeFeedTypes = prefs[disabledHomeFeedTypes],
+            homeContentDefaultsVersion = prefs[homeContentDefaultsVersion],
             relayGroupViewMode = prefs[relayGroupViewMode],
             concordViewMode = prefs[concordViewMode],
             callsEnabled = prefs[callsEnabled] ?: true,
@@ -110,6 +118,7 @@ class FeedVisibilityStore(
         store.edit { prefs ->
             value.disabledChatFeeds.let { if (it != null) prefs[disabledChatFeeds] = it else prefs.remove(disabledChatFeeds) }
             value.disabledHomeFeedTypes.let { if (it != null) prefs[disabledHomeFeedTypes] = it else prefs.remove(disabledHomeFeedTypes) }
+            value.homeContentDefaultsVersion.let { if (it != null) prefs[homeContentDefaultsVersion] = it else prefs.remove(homeContentDefaultsVersion) }
             value.relayGroupViewMode.let { if (it != null) prefs[relayGroupViewMode] = it else prefs.remove(relayGroupViewMode) }
             value.concordViewMode.let { if (it != null) prefs[concordViewMode] = it else prefs.remove(concordViewMode) }
             prefs[callsEnabled] = value.callsEnabled

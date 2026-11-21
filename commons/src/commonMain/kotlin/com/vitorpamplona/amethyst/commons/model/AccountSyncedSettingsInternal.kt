@@ -197,6 +197,12 @@ class AccountFeedPreferencesInternal(
      * everything-on feed. An explicitly empty string still means every type is on.
      */
     val disabledHomeFeedTypes: String = HomeFeedType.encode(HomeFeedType.ALL - HomeFeedType.DEFAULT_ENABLED),
+    /**
+     * The [HomeFeedType.CONTENT_DEFAULTS_VERSION] this blob's Home set was written under. Blobs from
+     * before the field existed decode as 0 and are re-read against today's defaults once, so a set
+     * the user never chose cannot keep text notes on Home forever.
+     */
+    val homeContentDefaultsVersion: Int = 0,
     /** Each screen's selected filter: [com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot] name to TopFilter JSON. */
     val feedFilters: Map<String, String> = emptyMap(),
     /** The feeds the user built, as [com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer] JSON. */
