@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.resources.home_content_type_podcasts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_polls
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_ratings
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_reposts
-import com.vitorpamplona.amethyst.commons.resources.home_content_type_shorts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_text_notes
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_threads
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_torrents
@@ -171,7 +170,6 @@ private val HOME_FEED_TYPES =
         HomeFeedTypeUi(HomeFeedType.COMMENTS, Res.string.home_content_type_comments, MaterialSymbols.Chat),
         HomeFeedTypeUi(HomeFeedType.PICTURES, Res.string.home_content_type_pictures, MaterialSymbols.Image),
         HomeFeedTypeUi(HomeFeedType.VIDEOS, Res.string.home_content_type_videos, MaterialSymbols.Videocam),
-        HomeFeedTypeUi(HomeFeedType.SHORTS, Res.string.home_content_type_shorts, MaterialSymbols.SmartDisplay),
         HomeFeedTypeUi(HomeFeedType.ARTICLES, Res.string.home_content_type_articles, MaterialSymbols.AutoMirrored.Article),
         HomeFeedTypeUi(HomeFeedType.WIKI, Res.string.home_content_type_wiki, MaterialSymbols.MenuBook),
         HomeFeedTypeUi(HomeFeedType.HIGHLIGHTS, Res.string.home_content_type_highlights, MaterialSymbols.FormatQuote),

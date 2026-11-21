@@ -40,12 +40,15 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
-import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
+/**
+ * The Media feed: pictures, NIP-94 files and full-length videos. Short/vertical videos (kinds 22 and
+ * 34236) are left to [com.vitorpamplona.amethyst.commons.shorts.dal.ShortsFeedFilter] so the same
+ * clip does not show up twice in the app.
+ */
 class VideoFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>(),
@@ -87,9 +90,6 @@ class VideoFeedFilter(
                     } +
                         LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
                             acceptableEvent(it, params)
-                        } +
-                        LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
-                            acceptableEvent(it, params)
                         }
                 notes
             },
@@ -117,13 +117,9 @@ class VideoFeedFilter(
 
     fun acceptanceEvent(noteEvent: FileMetadataEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
 
-    fun acceptanceEvent(noteEvent: AddressableShortVideoEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
-
     fun acceptanceEvent(noteEvent: AddressableNormalVideoEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
     fun acceptanceEvent(noteEvent: VideoNormalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
-
-    fun acceptanceEvent(noteEvent: VideoShortEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
     fun isPlayable(note: Note): Boolean {
         val noteEvent = note.event
@@ -133,10 +129,8 @@ class VideoFeedFilter(
         }
 
         return (noteEvent is FileMetadataEvent && acceptanceEvent(noteEvent)) ||
-            (noteEvent is AddressableShortVideoEvent && acceptanceEvent(noteEvent)) ||
             (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
             (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
-            (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
             (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
     }
 

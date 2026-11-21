@@ -95,7 +95,6 @@ enum class HomeFeedType(
     COMMENTS("comments", listOf(CommentEvent.KIND)),
     PICTURES("pictures", listOf(PictureEvent.KIND)),
     VIDEOS("videos", listOf(VideoNormalEvent.KIND, AddressableNormalVideoEvent.KIND)),
-    SHORTS("shorts", listOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND)),
     ARTICLES("articles", listOf(LongFormContentEvent.KIND)),
     WIKI("wiki", listOf(WikiArticleEvent.KIND)),
     HIGHLIGHTS("highlights", listOf(HighlightEvent.KIND)),
@@ -142,13 +141,15 @@ enum class HomeFeedType(
         val ALL: Set<HomeFeedType> = entries.toSet()
 
         /**
-         * What Astro's Home shows out of the box: a media-first timeline (pictures, videos, shorts,
-         * voice notes) with text notes and reposts, which is what makes it read like Instagram.
+         * What Astro's Home shows out of the box: a media-first timeline (pictures, videos, voice
+         * notes) with text notes and reposts, which is what makes it read like Instagram. Short
+         * videos are not here at all: Reels owns them (see [REELS_ONLY_KINDS]).
+         *
          * The niche groups (chess, birds, attestations, git, calendars, torrents, polls…) stay off
          * until the user turns them back on in Settings > Home > Content types.
          */
         val DEFAULT_ENABLED: Set<HomeFeedType> =
-            setOf(TEXT_NOTES, REPOSTS, PICTURES, VIDEOS, SHORTS, VOICE)
+            setOf(TEXT_NOTES, REPOSTS, PICTURES, VIDEOS, VOICE)
 
         fun fromCode(code: String?): HomeFeedType? = entries.firstOrNull { it.code == code }
 
@@ -170,9 +171,21 @@ enum class HomeFeedType(
          * still-enabled group also wants.
          */
         fun disabledKinds(enabled: Set<HomeFeedType>): Set<Int> {
-            if (enabled.size == ALL.size) return emptySet()
             val enabledKinds = enabled.flatMapTo(HashSet()) { it.kinds }
-            return (ALL - enabled).flatMapTo(HashSet()) { it.kinds }.apply { removeAll(enabledKinds) }
+            return (ALL - enabled)
+                .flatMapTo(HashSet()) { it.kinds }
+                .apply {
+                    removeAll(enabledKinds)
+                    // Reels is the only place a short video shows up, so Home drops it whatever the
+                    // toggles (or a stored setting written before this rule) say.
+                    addAll(REELS_ONLY_KINDS)
+                }
         }
+
+        /**
+         * Short/vertical video kinds, owned by the Reels tab alone. They have no Home toggle: the
+         * same clip in Home and in Reels read as duplicated content.
+         */
+        val REELS_ONLY_KINDS: Set<Int> = setOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND)
     }
 }

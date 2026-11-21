@@ -26,9 +26,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
-import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -75,27 +73,34 @@ class HomeFeedTypeTest {
 
     @Suppress("DEPRECATION") // TorrentCommentEvent: replaced by NIP-22, still part of the Torrents feed
     @Test
-    fun picturesVideosShortsAndTorrentsOwnTheirKinds() {
+    fun picturesVideosAndTorrentsOwnTheirKinds() {
         assertEquals(listOf(PictureEvent.KIND), HomeFeedType.PICTURES.kinds)
-        // Long-form videos are the horizontal/normal kinds; vertical/short kinds belong to Shorts.
+        // Home carries the horizontal/normal kinds only; the vertical/short ones are Reels'.
         assertEquals(listOf(VideoNormalEvent.KIND, AddressableNormalVideoEvent.KIND), HomeFeedType.VIDEOS.kinds)
-        assertEquals(listOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND), HomeFeedType.SHORTS.kinds)
         // Torrent comments ride the Torrents toggle, so turning it off hides the whole conversation.
         assertEquals(listOf(TorrentEvent.KIND, TorrentCommentEvent.KIND), HomeFeedType.TORRENTS.kinds)
     }
 
     @Test
-    fun disablingVideosLeavesShortsUntouched() {
+    fun disablingVideosLeavesPicturesUntouched() {
         val disabled = HomeFeedType.disabledKinds(HomeFeedType.ALL - HomeFeedType.VIDEOS)
         HomeFeedType.VIDEOS.kinds.forEach { assertTrue(it in disabled) }
-        // Shorts is a separate toggle, so its kinds stay live.
-        HomeFeedType.SHORTS.kinds.forEach { assertFalse(it in disabled) }
         assertFalse(PictureEvent.KIND in disabled)
     }
 
     @Test
-    fun disabledKindsEmptyWhenEverythingEnabled() {
-        assertTrue(HomeFeedType.disabledKinds(HomeFeedType.ALL).isEmpty())
+    fun shortsNeverReachHome() {
+        // Reels owns kinds 22 and 34236: Home drops them even with every toggle on.
+        HomeFeedType.REELS_ONLY_KINDS.forEach {
+            assertTrue("$it is still live in Home", it in HomeFeedType.disabledKinds(HomeFeedType.ALL))
+            assertTrue("$it is still live in Home", it in HomeFeedType.disabledKinds(HomeFeedType.DEFAULT_ENABLED))
+        }
+        assertNull(HomeFeedType.fromCode("shorts"))
+    }
+
+    @Test
+    fun disabledKindsHoldsOnlyTheReelsKindsWhenEverythingEnabled() {
+        assertEquals(HomeFeedType.REELS_ONLY_KINDS, HomeFeedType.disabledKinds(HomeFeedType.ALL))
     }
 
     @Test
