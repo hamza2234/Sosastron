@@ -560,3 +560,9 @@ This working copy is rebranded as **Astro** for local builds.
 - Build (release, no R8): `./gradlew :amethyst:assembleFdroidRelease -PastroApplicationId=app.astro.nostr -Pamethyst.skipMapping=true`
   then `zipalign -p -f 4` + `apksigner sign --ks /workspace/astro-release.jks --ks-key-alias astro`.
 - Build memory is capped in `~/.gradle/gradle.properties` (4g Gradle / 3g Kotlin) — the container has 15 GB.
+- Toolchain in this container: JDK 21 at `/workspace/jdk21` (`export JAVA_HOME=/workspace/jdk21`),
+  Android SDK at `/workspace/android-sdk` (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
+  The pre-push hook runs the JVM test suite, so both must be exported before `git push`.
+- `commons/src/jvmTest/resources/appupdate/*.apk` are gitignored-exempt fixtures that the
+  `appupdate` tests need; when they are missing, copy them from
+  `raw.githubusercontent.com/vitorpamplona/amethyst/main/commons/src/jvmTest/resources/appupdate/`.

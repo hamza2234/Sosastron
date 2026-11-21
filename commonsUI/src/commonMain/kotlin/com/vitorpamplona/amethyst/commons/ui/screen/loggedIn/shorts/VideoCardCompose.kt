@@ -100,7 +100,7 @@ fun VideoCardCompose(
 }
 
 @Composable
-private fun VideoCardImage(
+internal fun VideoCardImage(
     note: Note,
     event: VideoEvent,
     backgroundColor: MutableState<Color>,

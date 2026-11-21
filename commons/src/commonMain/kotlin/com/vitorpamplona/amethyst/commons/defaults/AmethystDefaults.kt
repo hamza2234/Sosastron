@@ -33,15 +33,12 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
  *
  * Pure data — no platform deps, no runtime config, no i18n. Change here,
  * both clients follow.
+ *
+ * [DefaultChannels] is deliberately empty: seeding it dropped every new install into Amethyst's and
+ * Anigma's public chat channels, which read as the app joining groups on the user's behalf.
  */
 
-val DefaultChannels =
-    listOf(
-        // Anigma's Nostr
-        ChannelTag("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", Constants.nos),
-        // Amethyst's Group
-        ChannelTag("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", Constants.nos),
-    )
+val DefaultChannels: List<ChannelTag> = emptyList()
 
 val DefaultNIP65RelaySet = setOf(Constants.mom, Constants.nos, Constants.bitcoiner)
 

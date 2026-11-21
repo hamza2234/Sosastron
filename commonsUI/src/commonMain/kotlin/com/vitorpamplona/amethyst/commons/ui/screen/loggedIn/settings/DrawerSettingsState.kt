@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultHiddenDrawerItemSet
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSection
@@ -62,8 +63,8 @@ class DrawerSettingsState(
 
     fun hideAll(section: DrawerSection) = update(DrawerSectionVisibility.hideAll(hidden, section))
 
-    /** Back to the stock drawer: nothing hidden. */
-    fun restoreDefault() = update(emptySet())
+    /** Back to the shipped Astro drawer: everything hidden but Settings and Profile. */
+    fun restoreDefault() = update(DefaultHiddenDrawerItemSet)
 
     /**
      * Re-seed from an external change (the saved settings flow emitted) without re-persisting. A no-op

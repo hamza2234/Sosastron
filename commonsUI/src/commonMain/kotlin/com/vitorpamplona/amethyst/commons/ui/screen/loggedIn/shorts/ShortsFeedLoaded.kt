@@ -20,25 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
+/**
+ * The reels feed: one video per screen, snapping to the next on a flick, with the engagement rail
+ * beside it. Each page is exactly the viewport height so a reel never shares the screen with its
+ * neighbour, which is what makes the feed read as pages rather than as a list.
+ */
 @Composable
 fun ShortsFeedLoaded(
     loaded: FeedState.Loaded,
@@ -49,8 +50,9 @@ fun ShortsFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
+        modifier = Modifier.fillMaxSize(),
         state = listState,
+        flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
     ) {
         itemsIndexed(
             items.list,
@@ -58,17 +60,13 @@ fun ShortsFeedLoaded(
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
             if (item.event is VideoEvent) {
-                VideoCardCompose(
-                    baseNote = item,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillParentMaxSize()) {
+                    ReelCard(
+                        baseNote = item,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
     }

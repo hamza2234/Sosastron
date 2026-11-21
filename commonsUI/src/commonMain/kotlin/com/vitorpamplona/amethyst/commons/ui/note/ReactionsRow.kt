@@ -700,7 +700,7 @@ private fun WatchZapAndRenderGallery(
 }
 
 @Composable
-private fun BoostWithDialog(
+internal fun BoostWithDialog(
     baseNote: Note,
     editState: State<GenericLoadable<EditState>>?,
     grayTint: Color,

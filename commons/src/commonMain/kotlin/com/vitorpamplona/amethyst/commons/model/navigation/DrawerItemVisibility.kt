@@ -32,12 +32,18 @@ package com.vitorpamplona.amethyst.commons.model.navigation
 val MandatoryDrawerItems: Set<NavBarItem> = setOf(NavBarItem.SETTINGS)
 
 /**
- * The rows Astro hides out of the box. The drawer opens as a short menu: the account header on top,
- * then Nests, Settings and the account switcher. Every other row is one tap away in Settings > Side
- * Menu, so nothing is lost — only the default changes.
+ * The rows Astro hides out of the box: every catalog row except Settings and Profile. The drawer
+ * opens as a short menu — the account header, the profile row and Settings — and every other
+ * destination is one tap away in Settings > Side Menu.
+ *
+ * This is also what "Restore default" restores, so the button brings the drawer back to the shipped
+ * layout rather than to the stock client's fully expanded one.
  */
 val DefaultHiddenDrawerItems: List<String> =
-    (NavBarItem.entries.toSet() - MandatoryDrawerItems - setOf(NavBarItem.NESTS)).map { it.name }.sorted()
+    (NavBarItem.entries.toSet() - MandatoryDrawerItems - setOf(NavBarItem.PROFILE)).map { it.name }.sorted()
+
+/** [DefaultHiddenDrawerItems] as the model set the settings screen edits. */
+val DefaultHiddenDrawerItemSet: Set<NavBarItem> = NavBarItem.entries.filterTo(mutableSetOf()) { it.name in DefaultHiddenDrawerItems }
 
 /**
  * Pure show/hide rules for the drawer's catalog rows, kept free of Compose and Android so they are

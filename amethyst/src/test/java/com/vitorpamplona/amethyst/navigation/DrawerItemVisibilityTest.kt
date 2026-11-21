@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultHiddenDrawerItemSet
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
@@ -141,16 +142,18 @@ class DrawerItemVisibilityTest {
 
         state.restoreDefault()
 
-        assertEquals(emptySet<NavBarItem>(), state.hidden)
-        assertEquals(0, state.totalHidden())
-        assertEquals(emptySet<NavBarItem>(), saved.last())
+        assertEquals(DefaultHiddenDrawerItemSet, state.hidden)
+        assertTrue(state.isVisible(NavBarItem.SETTINGS))
+        assertTrue(state.isVisible(NavBarItem.PROFILE))
+        assertFalse(state.isVisible(NavBarItem.DRAFTS))
+        assertEquals(DefaultHiddenDrawerItemSet, saved.last())
     }
 
     @Test
     fun stateHolderDoesNotRepublishANoOpEdit() {
         // Tapping a mandatory row must not republish the account's NIP-78 settings event.
         val saved = mutableListOf<Set<NavBarItem>>()
-        val state = DrawerSettingsState(emptySet()) { saved.add(it) }
+        val state = DrawerSettingsState(DefaultHiddenDrawerItemSet) { saved.add(it) }
 
         state.toggle(NavBarItem.SETTINGS)
         state.restoreDefault()

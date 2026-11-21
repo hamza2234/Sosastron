@@ -24,10 +24,9 @@ package com.vitorpamplona.amethyst.commons.model.navigation
 val DefaultBottomBarItems: List<NavBarItem> =
     listOf(
         NavBarItem.HOME,
+        NavBarItem.SHORTS,
         NavBarItem.MESSAGES,
-        NavBarItem.WALLET,
-        NavBarItem.BROWSER,
-        NavBarItem.NOTIFICATIONS,
+        NavBarItem.PROFILE,
     )
 
 /** The default bottom bar as unified entries (all built-in; favorites are added by the user). */

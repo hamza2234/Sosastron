@@ -73,24 +73,23 @@ class UiSettingsStoreTest {
             assertEquals(ThemeType.SYSTEM, settings.theme)
             assertNull(settings.preferredLanguage)
             assertEquals(ConnectivityType.ALWAYS, settings.automaticallyShowImages)
-            assertEquals(FeatureSetType.SIMPLIFIED, settings.featureSet)
+            assertEquals(FeatureSetType.PERFORMANCE, settings.featureSet)
             assertEquals(AccentColorType.PURPLE, settings.accentColor)
             assertEquals(FontSizeType.NORMAL, settings.fontSize)
             assertEquals("", settings.composeSignature)
-            assertEquals(NoteLayoutType.AUTHOR_COLUMN, settings.noteLayout)
+            assertEquals(NoteLayoutType.EDGE_TO_EDGE, settings.noteLayout)
             assertEquals(ChatLayoutType.BUBBLES, settings.chatLayout)
             assertEquals(ConnectivityType.WIFI_ONLY, settings.automaticallyDownloadTranslationModels)
 
             // Not a constant, and not the data class default either: UiSettings()
-            // says ALWAYS, but a store with no feature set reads SIMPLIFIED, and
-            // SIMPLIFIED means NEVER. Reading an empty store is therefore not the
-            // same as constructing UiSettings() — pinned here because the two look
-            // interchangeable at a call site.
+            // says ALWAYS, but a store with no feature set reads PERFORMANCE, and
+            // anything but COMPLETE means NEVER. Reading an empty store is therefore
+            // not the same as constructing UiSettings() — pinned here because the two
+            // look interchangeable at a call site.
             assertEquals(BooleanType.NEVER, settings.useTrackedBroadcasts)
 
             // the ones that default on
             assertTrue(settings.showHomeNewThreadsTab)
-            assertTrue(settings.showHomeConversationsTab)
             assertTrue(settings.showProfileBadges)
             assertTrue(settings.showProfileAppRecommendations)
             assertTrue(settings.showProfileZapReceivedFeed)
@@ -99,6 +98,7 @@ class UiSettingsStoreTest {
             assertTrue(settings.showPayToZapChip)
 
             // and the ones that default off
+            assertFalse(settings.showHomeConversationsTab)
             assertFalse(settings.showHomeEverythingTab)
             assertFalse(settings.dontShowPushNotificationSelector)
             assertFalse(settings.dontAskForNotificationPermissions)
