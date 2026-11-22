@@ -95,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.resources.follow_geohash
 import com.vitorpamplona.amethyst.commons.resources.follow_list_algo_feed_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
 import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_arabic
+import com.vitorpamplona.amethyst.commons.resources.follow_list_arabic_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
 import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_community_summary
@@ -368,6 +370,7 @@ private fun TopNavLabel.resource(): StringResource =
         TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_kind3follows_users_only
         TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_kind3_follows_users_only
         TopNavLabel.GLOBAL -> Res.string.follow_list_global
+        TopNavLabel.ARABIC -> Res.string.follow_list_arabic
         TopNavLabel.CURATED -> Res.string.follow_list_curated
         TopNavLabel.AROUND_ME -> Res.string.follow_list_aroundme
         TopNavLabel.TELEPORT -> Res.string.follow_list_teleport
@@ -384,6 +387,7 @@ private fun TopNavLabel.descriptionResource(): StringResource? =
         TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_kind3follows_users_only_summary
         TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_default_follows_summary
         TopNavLabel.GLOBAL -> Res.string.follow_list_global_summary
+        TopNavLabel.ARABIC -> Res.string.follow_list_arabic_summary
         TopNavLabel.CURATED -> Res.string.follow_list_curated_summary
         TopNavLabel.AROUND_ME -> Res.string.follow_list_aroundme_summary
         TopNavLabel.TELEPORT -> Res.string.follow_list_teleport_summary
@@ -551,6 +555,7 @@ private fun FeedDefinition.group(): FeedGroup =
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                 is TopFilter.TeleportPicker -> FeedGroup.LOCATIONS
                 is TopFilter.Global -> FeedGroup.RELAYS
+                is TopFilter.Arabic -> FeedGroup.FEEDS
                 is TopFilter.Selected -> FeedGroup.RELAYS
                 is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
                 is TopFilter.CustomFeed -> FeedGroup.CUSTOM
@@ -715,6 +720,10 @@ private fun FeedIcon(
         when (item.code) {
             is TopFilter.Global -> {
                 MaterialSymbols.Public
+            }
+
+            is TopFilter.Arabic -> {
+                MaterialSymbols.Language
             }
 
             is TopFilter.Selected -> {

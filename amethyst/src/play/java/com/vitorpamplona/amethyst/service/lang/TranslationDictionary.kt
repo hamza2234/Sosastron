@@ -39,7 +39,7 @@ internal object TranslationDictionary {
 
     // Texts shorter than this, or with no letter codepoints (emoji-only, punctuation), are skipped
     // before any ML Kit work — language identification is unreliable on them.
-    private const val MIN_TRANSLATABLE_LENGTH = 4
+    private const val MIN_TRANSLATABLE_LENGTH = 1
 
     val lnRegex: Pattern = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
     val tagRegex: Pattern =

@@ -65,7 +65,7 @@ object LanguageTranslatorService {
         LanguageIdentificationOptions
             .Builder()
             .setExecutor(executorService)
-            .setConfidenceThreshold(0.6f)
+            .setConfidenceThreshold(0.3f)
             .build()
     private val languageIdentification = LanguageIdentification.getClient(identificationOptions)
 

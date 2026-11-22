@@ -121,7 +121,9 @@ android {
             ?: error("tools/arti-build/ANDROID_NDK_VERSION is missing or empty — it pins the NDK that strips src/main/jniLibs")
 
     defaultConfig {
-        applicationId = "com.vitorpamplona.amethyst"
+        applicationId =
+            providers.gradleProperty("astroApplicationId").orNull
+                ?: "com.vitorpamplona.amethyst"
         minSdk =
             libs.versions.android.minSdk
                 .get()
@@ -317,7 +319,6 @@ android {
         create("fdroid") {
             dimension = "channel"
             buildConfigField("boolean", "IS_CASTING_AVAILABLE", "false")
-            providers.gradleProperty("astroApplicationId").orNull?.let { applicationId = it }
         }
     }
 

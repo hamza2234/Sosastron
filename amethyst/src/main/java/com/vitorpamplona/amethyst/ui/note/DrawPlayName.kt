@@ -47,7 +47,7 @@ fun DrawPlayName(name: String) {
     }
 }
 
-private fun speak(
+internal fun speak(
     message: String,
     context: Context,
     owner: LifecycleOwner,

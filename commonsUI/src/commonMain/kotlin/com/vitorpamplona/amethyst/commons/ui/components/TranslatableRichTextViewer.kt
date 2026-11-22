@@ -86,3 +86,10 @@ fun rememberTranslation(
     content: String,
     accountViewModel: AccountViewModel,
 ): String = LocalTranslationPlatform.current.rememberTranslation(content, accountViewModel)
+
+/** The text the reader actually sees: the translation when shown, the original otherwise. */
+@Composable
+fun rememberDisplayedText(
+    content: String,
+    accountViewModel: AccountViewModel,
+): String = LocalTranslationPlatform.current.rememberDisplayedText(content, accountViewModel)

@@ -31,8 +31,9 @@ class GlobalFeedFlow(
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
+    val arabicOnly: Boolean = false,
 ) : IFeedFlowsType {
-    val default = GlobalTopNavFilter(outboxRelays, proxyRelays, relayFeeds)
+    val default = GlobalTopNavFilter(outboxRelays, proxyRelays, relayFeeds, arabicOnly)
 
     override fun flow() = MutableStateFlow(default)
 

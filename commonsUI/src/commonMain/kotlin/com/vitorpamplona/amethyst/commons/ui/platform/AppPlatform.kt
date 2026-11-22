@@ -235,6 +235,14 @@ interface AppPlatform {
     @Composable
     fun SpeakNameButton(name: String) {}
 
+    /** A button that reads [text] aloud, empty on platforms without a speech engine. */
+    @Composable
+    fun SpeakTextButton(text: String) {}
+
+    /** The "read aloud" action itself, for menus that need it without a button. */
+    @Composable
+    fun speakTextAction(): (String) -> Unit = { }
+
     /**
      * A dialog to pick a place (map, search, "use my location"), as a geohash. The reader picks how
      * big an area it names, unless [precision] fixes its length: then the picker picks a point at
@@ -431,6 +439,12 @@ fun AroundMeLocationLabel() = LocalAppPlatform.current.AroundMeLocationLabel()
 
 @Composable
 fun SpeakNameButton(name: String) = LocalAppPlatform.current.SpeakNameButton(name)
+
+@Composable
+fun SpeakTextButton(text: String) = LocalAppPlatform.current.SpeakTextButton(text)
+
+@Composable
+fun rememberSpeakTextAction(): (String) -> Unit = LocalAppPlatform.current.speakTextAction()
 
 @Composable
 fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = LocalAppPlatform.current.NotificationProviderPrompt(sharedPrefs)

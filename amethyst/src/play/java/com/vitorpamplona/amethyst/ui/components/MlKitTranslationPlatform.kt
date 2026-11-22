@@ -62,6 +62,24 @@ object MlKitTranslationPlatform : TranslationPlatform {
         accountViewModel: AccountViewModel,
     ): String = rememberMlKitTranslation(content, accountViewModel)
 
+    @Composable
+    override fun rememberDisplayedText(
+        content: String,
+        accountViewModel: AccountViewModel,
+    ): String {
+        val translated = rememberMlKitTranslation(content, accountViewModel)
+        if (translated == content) return content
+
+        val languages = accountViewModel.account.settings.syncedSettings.languages
+        val languagePreferences by languages.languagePreferences.collectAsStateWithLifecycle()
+        val config =
+            TranslationsCache.get(content, languages.translateTo.value, languages.dontTranslateFrom.value)
+                ?: return translated
+        val source = config.sourceLang ?: return translated
+        val target = config.targetLang ?: return translated
+        return if (languagePreferences["$source,$target"] == source) content else translated
+    }
+
     override fun cachedTranslation(
         content: String,
         accountViewModel: AccountViewModel,

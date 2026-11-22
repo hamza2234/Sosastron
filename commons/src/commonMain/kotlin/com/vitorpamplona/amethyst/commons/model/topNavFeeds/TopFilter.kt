@@ -37,13 +37,11 @@ sealed class TopFilter(
     @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Global")
     object Global : TopFilter(" Global ")
 
-    /**
-     * Notifications-only curated mode: like [Global] it admits authors the
-     * user doesn't follow, but it also applies per-kind relevance heuristics
-     * to remove less interesting notes (reactions/reposts that don't target
-     * the user's own notes, unrelated thread replies, etc.). In Notifications,
-     * [Global] shows every event that p-tags the user instead.
-     */
+    /** Like [Global], but keeps only posts written in Arabic, from every relay. */
+    @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Arabic")
+    object Arabic : TopFilter(" Arabic ")
+
     @Serializable
     @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Selected")
     object Selected : TopFilter(" Selected ")

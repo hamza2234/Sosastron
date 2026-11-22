@@ -277,6 +277,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot.WebOfT
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.CommentsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.UrlPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.UrlScreen
@@ -527,6 +528,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+    composableFromEndArgs<Route.NoteComments> { CommentsScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Nip> { OfficialNipScreen(it.number, it.anchor, accountViewModel, nav) }
     composableFromEndArgs<Route.EventKind> { EventKindScreen(it.kind, accountViewModel, nav) }
     composableFromEnd<Route.Nips> { NipsScreen(accountViewModel, nav) }

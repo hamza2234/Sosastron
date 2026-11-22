@@ -85,6 +85,12 @@ class TopNavFilterState(
             name = LabelName(TopNavLabel.GLOBAL),
         )
 
+    val arabicFollow =
+        FeedDefinition(
+            code = TopFilter.Arabic,
+            name = LabelName(TopNavLabel.ARABIC),
+        )
+
     // Notifications-only curated mode; in Notifications, Global itself shows
     // every event that p-tags the user.
     val selectedFollow =
@@ -125,7 +131,7 @@ class TopNavFilterState(
             name = LabelName(TopNavLabel.ALL_FAVORITE_DVMS),
         )
 
-    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, muteListFollow)
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, muteListFollow)
 
     val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow, muteListFollow)
 
@@ -315,7 +321,7 @@ class TopNavFilterState(
         ) { peopleLists, interests ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -327,7 +333,7 @@ class TopNavFilterState(
         combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     relays,
                     listOf(muteListFollow),
@@ -339,7 +345,7 @@ class TopNavFilterState(
         combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     relays,
                     listOf(muteListFollow),
@@ -356,7 +362,7 @@ class TopNavFilterState(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
                     // music + playlists screens can show only the user's own published items.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -373,7 +379,7 @@ class TopNavFilterState(
                 listOf(
                     // Git repository announcements can be narrowed by author, hashtag and geohash,
                     // so this mirrors the kind3 catalog plus "Mine" — the user's own repositories.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -390,7 +396,7 @@ class TopNavFilterState(
                 listOf(
                     // Workout records can be narrowed by author, hashtag and geohash, so this
                     // mirrors the kind3 catalog plus "Mine" — the user's own training.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -407,7 +413,7 @@ class TopNavFilterState(
                 listOf(
                     // Highlights can be narrowed by author, hashtag and geohash, so this mirrors
                     // the kind3 catalog plus "Mine" — the user's own highlights.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -440,7 +446,7 @@ class TopNavFilterState(
                     // Relay-group discovery routes to relays by author, hashtag and geohash, plus
                     // favorited + joined-group relay chips; "Mine" (the joined-groups view) sits last
                     // in the base group to match the ordering every other feed uses.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     joinedRelayChips,
@@ -458,7 +464,7 @@ class TopNavFilterState(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
                     // podcasts + episodes screens can show only the user's own published shows/episodes.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -470,7 +476,7 @@ class TopNavFilterState(
         combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow),
                     peopleLists,
                     relays,
                     listOf(muteListFollow),
@@ -487,7 +493,7 @@ class TopNavFilterState(
         combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow),
                     peopleLists,
                     relays,
                     listOf(muteListFollow),
@@ -499,7 +505,7 @@ class TopNavFilterState(
         livePeopleListsFlow.transform { peopleLists ->
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow, arabicFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
@@ -534,7 +540,7 @@ class TopNavFilterState(
     val authorOnlyRoutes =
         _authorOnlyRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val notificationLists =
         _notificationLists
@@ -544,42 +550,42 @@ class TopNavFilterState(
     val badgeRoutes =
         _badgeRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val communityRoutes =
         _communityRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val musicRoutes =
         _musicRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val gitRepositoryRoutes =
         _gitRepositoryRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val workoutRoutes =
         _workoutRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val highlightsRoutes =
         _highlightsRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val relayGroupsDiscoveryRoutes =
         _relayGroupsDiscoveryRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     val podcastRoutes =
         _podcastRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, arabicFollow, mineFollow, muteListFollow))
 
     fun destroy() {
         Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
@@ -627,6 +633,7 @@ enum class TopNavLabel {
     ALL_USER_FOLLOWS,
     DEFAULT_FOLLOWS,
     GLOBAL,
+    ARABIC,
     CURATED,
     AROUND_ME,
     TELEPORT,

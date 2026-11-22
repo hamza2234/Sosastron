@@ -771,7 +771,13 @@ private fun ReplyReactionWithDialog(
             voiceRecordingState = voiceRecordingState,
         )
     } else {
-        ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = showCounter) {
+        ReplyReaction(
+            baseNote,
+            grayTint,
+            accountViewModel,
+            showCounter = showCounter,
+            onCounterClick = { nav.nav(Route.NoteComments(baseNote.idHex)) },
+        ) {
             nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
         }
     }
@@ -837,6 +843,7 @@ fun ReplyReaction(
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
     iconSizeModifier: Modifier = Size19Modifier,
+    onCounterClick: (() -> Unit)? = null,
     onPress: () -> Unit,
 ) {
     ClickableBox(
@@ -872,10 +879,17 @@ fun ReplyCounter(
     baseNote: Note,
     textColor: Color,
     accountViewModel: AccountViewModel,
+    onClick: (() -> Unit)? = null,
 ) {
     val repliesState by observeNoteReplyCount(baseNote, accountViewModel)
 
-    SlidingAnimationCount(repliesState, textColor, accountViewModel)
+    if (onClick == null) {
+        SlidingAnimationCount(repliesState, textColor, accountViewModel)
+    } else {
+        ClickableBox(onClick = onClick) {
+            SlidingAnimationCount(repliesState, textColor, accountViewModel)
+        }
+    }
 }
 
 @Composable

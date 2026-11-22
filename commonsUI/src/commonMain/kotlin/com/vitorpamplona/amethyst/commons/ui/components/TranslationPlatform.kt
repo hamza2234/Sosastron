@@ -54,6 +54,17 @@ interface TranslationPlatform {
     ): String
 
     /**
+     * Exactly what the reader sees for [content]: the translation, or the original when no
+     * translation applies or the reader switched this language pair back to the original.
+     * "Read aloud" uses it so the voice always matches the text on screen.
+     */
+    @Composable
+    fun rememberDisplayedText(
+        content: String,
+        accountViewModel: AccountViewModel,
+    ): String = content
+
+    /**
      * The already-computed translation of [content] under the current settings, or null when
      * none occurred or none is cached. Cache-only: it backs "Copy Translated", which applies
      * to text on screen, and rendering that text through [Translatable] filled the cache.
@@ -91,6 +102,12 @@ interface TranslationPlatform {
 
         @Composable
         override fun rememberTranslation(
+            content: String,
+            accountViewModel: AccountViewModel,
+        ): String = content
+
+        @Composable
+        override fun rememberDisplayedText(
             content: String,
             accountViewModel: AccountViewModel,
         ): String = content

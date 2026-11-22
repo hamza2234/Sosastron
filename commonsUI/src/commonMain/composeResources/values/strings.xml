@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="comments_title">Comments</string>
+    <string name="listen_to_message">Listen</string>
+    <string name="add_comment_hint">Add a comment…</string>
     <!-- Key Backup (Desktop settings) -->
     <string name="backup_keys_secret_label">Secret key (nsec)</string>
     <string name="backup_keys_reveal">Reveal secret key</string>
@@ -4532,6 +4535,8 @@
     <string name="follow_list_default_follows_summary">Only the accounts on your NIP-02 contact list (kind 3). The classic following feed.</string>
     <string name="follow_list_geohash_summary">Notes geotagged in this area.</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_arabic">Arab Community</string>
+    <string name="follow_list_arabic_summary">Global posts written in Arabic.</string>
     <string name="follow_list_global_summary">Recent posts from everyone on your relays, not just the people you follow. Muted accounts stay hidden.</string>
     <string name="follow_list_hashtag_summary">Notes tagged with this hashtag.</string>
     <string name="follow_list_info">About this filter</string>

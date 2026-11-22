@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_edit_message
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_message
+import com.vitorpamplona.amethyst.commons.resources.listen_to_message
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.rememberDisplayedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
@@ -91,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.RemoveForEveryoneConf
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberSpeakTextAction
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.QuickZapAmountRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordExpiringPinDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
@@ -288,6 +291,20 @@ fun ChatMessageActionSheet(
 
             // Stage one: the primary chat action (reply / edit draft) is always shown.
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
+
+            val originalText = note.event?.content.orEmpty()
+            if (originalText.isNotBlank()) {
+                val speakText = rememberSpeakTextAction()
+                // The message may be shown translated: read the text on screen, not the original.
+                val spokenText = rememberDisplayedText(originalText, accountViewModel)
+                SectionDivider()
+                TileRow {
+                    ActionTile(MaterialSymbols.AutoMirrored.VolumeUp, stringRes(Res.string.listen_to_message)) {
+                        speakText(spokenText)
+                        onDismiss()
+                    }
+                }
+            }
 
             // Editing a chat message, gated by where it lives:
             //  - Buzz: kind-9 message in a Buzz-dialect relay group (or a legacy kind-40002 one)

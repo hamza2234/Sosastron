@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.UriHandler
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
@@ -67,6 +68,8 @@ import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.note.DrawPlayText
+import com.vitorpamplona.amethyst.ui.note.speak
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.InlineNappletView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
@@ -179,6 +182,18 @@ object AndroidAppPlatform : AppPlatform {
 
     @Composable
     override fun SpeakNameButton(name: String) = DrawPlayName(name)
+
+    @Composable
+    override fun SpeakTextButton(text: String) = DrawPlayText(text)
+
+    @Composable
+    override fun speakTextAction(): (String) -> Unit {
+        val context = LocalContext.current
+        val owner = LocalLifecycleOwner.current
+        return remember(context, owner) {
+            { text: String -> speak(text, context, owner) }
+        }
+    }
 
     @Composable
     override fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = SelectNotificationProvider(sharedPrefs)

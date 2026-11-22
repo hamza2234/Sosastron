@@ -906,6 +906,11 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    /** A post's comments: the post on top, every reply below it flat, and a composer at the bottom. */
+    @Serializable data class NoteComments(
+        val id: String,
+    ) : Route()
+
     /** Official NIP [number] (`01`, `7D`) in the in-app reader, scrolled to [anchor] when given. */
     @Serializable data class Nip(
         val number: String,

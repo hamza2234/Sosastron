@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.rememberDisplayedText
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
@@ -487,6 +488,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProviderList
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedAssertion
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedList
+import com.vitorpamplona.amethyst.commons.ui.platform.SpeakTextButton
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.fullWidthHeaderPictureSize
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
@@ -3404,6 +3406,12 @@ fun FirstUserInfoRow(
         }
 
         JumpToParentReplyButton(baseNote, accountViewModel, nav)
+
+        val originalText = remember(noteEvent) { noteEvent?.content.orEmpty() }
+        if (originalText.isNotBlank()) {
+            // Read what the reader sees: the translation when one is shown, the original otherwise.
+            SpeakTextButton(rememberDisplayedText(originalText, accountViewModel))
+        }
 
         // The dotted TimeAgo carries its own " • " separator and the options
         // button has slack around its icon, so this pair stays unspaced.

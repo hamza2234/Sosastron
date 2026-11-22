@@ -69,6 +69,8 @@ class FeedTopNavFilterState(
     val allFollows: StateFlow<MergedFollowListsState.AllFollows>,
     val locationFlow: () -> StateFlow<LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    /** The wider relay set the Arab Community filter listens to (the user's relays plus public ones). */
+    val arabicRelays: StateFlow<Set<NormalizedRelayUrl>> = followsRelays,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val mineRelays: StateFlow<Set<NormalizedRelayUrl>>,
@@ -85,8 +87,12 @@ class FeedTopNavFilterState(
         when (listName) {
             // TeleportPicker is a UI-only sentinel (intercepted by the spinner to open the
             // map picker); it never reaches here, but fall back to Global for exhaustiveness.
-            TopFilter.Global, TopFilter.Selected, TopFilter.TeleportPicker -> {
-                GlobalFeedFlow(followsRelays, proxyRelays, relayFeeds)
+            TopFilter.Global, TopFilter.Arabic, TopFilter.Selected, TopFilter.TeleportPicker -> {
+                if (listName is TopFilter.Arabic) {
+                    GlobalFeedFlow(arabicRelays, proxyRelays, relayFeeds, arabicOnly = true)
+                } else {
+                    GlobalFeedFlow(followsRelays, proxyRelays, relayFeeds)
+                }
             }
 
             TopFilter.AllFollows -> {

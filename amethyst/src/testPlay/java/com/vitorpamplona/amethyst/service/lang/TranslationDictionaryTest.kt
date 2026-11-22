@@ -32,11 +32,17 @@ class TranslationDictionaryTest {
     // ----- isWorthTranslating -----
 
     @Test
-    fun `short text is not worth translating`() {
+    fun `empty text is not worth translating`() {
         assertFalse(TranslationDictionary.isWorthTranslating(""))
-        assertFalse(TranslationDictionary.isWorthTranslating("a"))
-        assertFalse(TranslationDictionary.isWorthTranslating("ab"))
-        assertFalse(TranslationDictionary.isWorthTranslating("abc"))
+    }
+
+    @Test
+    fun `any text with a letter is worth translating, however short`() {
+        // Readers asked for a translation on every post, including one-word replies.
+        assertTrue(TranslationDictionary.isWorthTranslating("a"))
+        assertTrue(TranslationDictionary.isWorthTranslating("ab"))
+        assertTrue(TranslationDictionary.isWorthTranslating("abc"))
+        assertTrue(TranslationDictionary.isWorthTranslating("نعم"))
     }
 
     @Test

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.topNavFeeds.global
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.utils.hasArabicContent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -35,10 +36,12 @@ class GlobalTopNavFilter(
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
+    /** The Arab Community filter: same relays as Global, only posts written in Arabic. */
+    val arabicOnly: Boolean = false,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
-    override fun match(noteEvent: Event) = true
+    override fun match(noteEvent: Event) = !arabicOnly || noteEvent.content.hasArabicContent()
 
     override fun toPerRelayFlow(cache: ICacheProvider): Flow<GlobalTopNavPerRelayFilterSet> =
         combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->

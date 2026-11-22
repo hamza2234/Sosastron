@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="comments_title">التعليقات</string>
+    <string name="listen_to_message">استماع</string>
+    <string name="add_comment_hint">أضف تعليقاً…</string>
     <!-- Login & Auth -->
     <!-- New Key Warning -->
     <!-- Key Backup (Desktop settings) -->
@@ -2313,6 +2316,8 @@
     <string name="follow_list_aroundme">حولي</string>
     <string name="follow_list_curated">منسَّق</string>
     <string name="follow_list_global">العالمي</string>
+    <string name="follow_list_arabic">المجتمع العربي</string>
+    <string name="follow_list_arabic_summary">منشورات عالمية مكتوبة بالعربية.</string>
     <string name="follow_list_kind3_follows_users_only">قائمة المتابَعين الافتراضية</string>
     <string name="follow_list_kind3follows">جميع المتابعات</string>
     <string name="follow_list_kind3follows_users_only">جميع المتابَعين</string>

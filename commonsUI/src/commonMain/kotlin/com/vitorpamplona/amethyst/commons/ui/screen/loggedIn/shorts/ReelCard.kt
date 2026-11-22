@@ -61,11 +61,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.resources.show_more
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPa
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.BoostWithDialog
 import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.commons.ui.note.PayReaction
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.commons.ui.note.ShareReaction
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -295,56 +297,82 @@ private fun ReelActionRail(
 ) {
     var showMenu by remember(baseNote.idHex) { mutableStateOf(false) }
 
+    val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ReelRailSpacing),
     ) {
-        ReplyReaction(
-            baseNote = baseNote,
-            grayTint = ReelIconTint,
-            accountViewModel = accountViewModel,
-            showCounter = true,
-            iconSizeModifier = Modifier.size(ReelActionSize),
-        ) {
-            nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
+        // Same order and same counters the user picked for the reaction row in Settings.
+        reactionRowItems.forEach { item ->
+            when (item.action) {
+                ReactionRowAction.Reply -> {
+                    ReplyReaction(
+                        baseNote = baseNote,
+                        grayTint = ReelIconTint,
+                        accountViewModel = accountViewModel,
+                        showCounter = item.showCounter,
+                        iconSizeModifier = Modifier.size(ReelActionSize),
+                        onCounterClick = { nav.nav(Route.NoteComments(baseNote.idHex)) },
+                    ) {
+                        nav.nav(Route.NoteComments(baseNote.idHex))
+                    }
+                }
+
+                ReactionRowAction.Like -> {
+                    LikeReaction(
+                        baseNote = baseNote,
+                        grayTint = ReelIconTint,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        iconSize = ReelActionSize,
+                        showCounter = item.showCounter,
+                    )
+                }
+
+                ReactionRowAction.Boost -> {
+                    BoostWithDialog(
+                        baseNote = baseNote,
+                        editState = null,
+                        grayTint = ReelIconTint,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        showCounter = item.showCounter,
+                    )
+                }
+
+                ReactionRowAction.Zap -> {
+                    ZapReaction(
+                        baseNote = baseNote,
+                        grayTint = ReelIconTint,
+                        accountViewModel = accountViewModel,
+                        iconSize = ReelActionSize,
+                        iconSizeModifier = Modifier.size(ReelActionSize),
+                        showCounter = item.showCounter,
+                        nav = nav,
+                    )
+                }
+
+                ReactionRowAction.Share -> {
+                    ShareReaction(
+                        note = baseNote,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        grayTint = ReelIconTint,
+                        barChartModifier = Modifier.size(ReelActionSize),
+                    )
+                }
+
+                ReactionRowAction.Pay -> {
+                    PayReaction(
+                        baseNote = baseNote,
+                        grayTint = ReelIconTint,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
         }
-
-        LikeReaction(
-            baseNote = baseNote,
-            grayTint = ReelIconTint,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            iconSize = ReelActionSize,
-            showCounter = true,
-        )
-
-        BoostWithDialog(
-            baseNote = baseNote,
-            editState = null,
-            grayTint = ReelIconTint,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            showCounter = true,
-        )
-
-        ZapReaction(
-            baseNote = baseNote,
-            grayTint = ReelIconTint,
-            accountViewModel = accountViewModel,
-            iconSize = ReelActionSize,
-            iconSizeModifier = Modifier.size(ReelActionSize),
-            showCounter = true,
-            nav = nav,
-        )
-
-        ShareReaction(
-            note = baseNote,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            grayTint = ReelIconTint,
-            barChartModifier = Modifier.size(ReelActionSize),
-        )
 
         Box {
             Icon(

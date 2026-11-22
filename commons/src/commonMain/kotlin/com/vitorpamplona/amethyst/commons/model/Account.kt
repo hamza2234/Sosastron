@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSig
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.DefaultArabicCommunityRelays
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EventProcessor
 import com.vitorpamplona.amethyst.commons.model.IAccount
@@ -1133,6 +1134,16 @@ class Account(
     val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
     val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
 
+    /**
+     * The relays the Arab Community filter listens to: the user's own relays plus the curated
+     * public ones, so the filter sees Arabic posts from outside the user's follow bubble.
+     */
+    val arabicCommunityRelays: StateFlow<Set<NormalizedRelayUrl>> =
+        combine(defaultGlobalRelays.flow, MutableStateFlow(DefaultArabicCommunityRelays.RELAYS)) { mine, curated ->
+            (mine + curated.mapNotNullTo(HashSet()) { it.normalizeRelayUrlOrNull() }).toSet()
+        }.flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, defaultGlobalRelays.flow.value)
+
     // keeps a cache of the declared outbox relays for each author
     val declaredFollowsPerOutboxRelay = DeclaredFollowsPerOutboxRelay(kind3FollowList, cache, scope).flow
     val declaredFollowsPerUsingRelay = DeclaredFollowsPerUsingRelay(kind3FollowList, cache, scope).flow
@@ -1320,6 +1331,7 @@ class Account(
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
+            arabicRelays = arabicCommunityRelays,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             mineRelays = mineRelays.flow,
